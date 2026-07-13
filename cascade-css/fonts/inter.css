@@ -1,0 +1,35 @@
+/* cascade-css — fonts/inter.css  (GENERATED from tokens.mjs by `just gen` — do not edit by hand)
+ * Font-specific preset for Inter: sets the family AND the optical variables
+ * that depend on this typeface (mirror of cascade's font.bundles.inter).
+ * Measured (OS/2, unitsPerEm 2048): x-height 0.546 (sxHeight 1118), cap-height 0.728,
+ * typo asc/desc 0.969 / -0.241. x-height is MEASURED; the rest starts from the
+ * sans-text profile. Load AFTER cascade.css.
+ */
+
+.cascade.bundle-inter {
+  --cf-family-body: "Inter", system-ui, -apple-system, sans-serif;
+  --cf-xh:  0.546;
+  --cf-kt:  0.03;
+  --cf-lb:  1.45;
+  --cf-bws: 0.26;
+}
+
+.cascade.heading-inter {
+  --cf-family-heading: "Inter", system-ui, -apple-system, sans-serif;
+  --cf-h-xh: 0.546;
+  --cf-h-kt: 0.03;
+  --cf-h-lb: 1.45;
+}
+
+/* Optional cross-font size normalization: an alias scaled so Inter's x-height
+ * (0.546) matches 0.5.  size-adjust ≈ 0.5 / 0.546 = 91.6%. */
+@font-face {
+  font-family: "Inter xh-normalized";
+  src: local("Inter"), local("InterVariable");
+  size-adjust: 91.6%;
+  ascent-override: 90%;
+  descent-override: 22%;
+}
+/* Use via a preset whose --cf-xh is the normalized x-height (0.5):
+ *   .cascade.bundle-inter-norm { --cf-family-body: "Inter xh-normalized", sans-serif;
+ *     --cf-xh: 0.5; --cf-kt: 0.03; --cf-lb: 1.45; --cf-bws: 0.26; } */

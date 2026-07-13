@@ -1,0 +1,11 @@
+{
+  // Relaxed so the plain-JS tools (gen.mjs / verify.mjs) pass `deno check` without
+  // per-parameter annotations, while the typed token schema (tokens.mjs) and the
+  // typed server (serve.ts) are still enforced. Deno supplies Node's types built-in,
+  // so `node:*` imports resolve with no @types/node and no node_modules.
+  "compilerOptions": {
+    "checkJs": true,
+    "noImplicitAny": false,
+    "useUnknownInCatchVariables": false
+  }
+}

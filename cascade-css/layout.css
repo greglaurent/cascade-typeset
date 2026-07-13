@@ -1,0 +1,152 @@
+/* cascade-css — layout.css
+ * Components: native HTML elements bound to cascade's components, mirroring
+ * layout.typ's markup rule + component registry. Everything reads the scale /
+ * optical / rhythm / theme tokens, so restyling is done by tweaking variables,
+ * never by editing selectors.
+ *
+ * Registry → element map (step, category, notable defaults):
+ *   text-3 (0, body)      → body / p           heading-1 (p4, w700) → h1
+ *   text-1 (n2, fg-muted) → .text-1            heading-2 (p3, w600) → h2
+ *   emphasis              → em, i              heading-3 (p2, w600) → h3
+ *   strong (w700)         → strong, b          heading-4 (p1, w600) → h4
+ *   link (underline)      → a                  code (code)          → code, kbd
+ *   quote (italic, inset) → blockquote         code-block           → pre
+ *   figure-caption (n2)   → figcaption         list / enum          → ul / ol
+ *   divider (rule)        → hr                 footnote-entry (n2)   → .footnotes
+ */
+
+/* ── Container = "page" + body text (text-3 / step 0) ── */
+.cascade {
+  box-sizing: border-box;
+  max-inline-size: calc(var(--cf-measure) * 1ch);   /* the measure */
+  margin-inline: auto;
+  padding: var(--cr-space-p5);
+
+  color: var(--ct-fg);
+  background: var(--ct-bg);
+
+  font-family: var(--cf-family-body);
+  font-size: var(--cs-size-0);
+  line-height: var(--cf-lead-0);
+  letter-spacing: var(--cf-track-0);
+  word-spacing: var(--cf-ws-0);
+
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  font-feature-settings: "kern", "liga", "clig";
+  -webkit-font-smoothing: antialiased;
+  hyphens: none;                 /* ragged; cascade justify=false */
+}
+.cascade *, .cascade *::before, .cascade *::after { box-sizing: border-box; }
+
+/* ── Body paragraphs — separated by one baseline (rhythm), no indent ── */
+.cascade p { margin: 0 0 var(--cr-baseline); }
+.cascade > *:last-child { margin-bottom: 0; }
+
+/* ── Headings (heading category = serif) ── */
+.cascade h1, .cascade h2, .cascade h3, .cascade h4 {
+  font-family: var(--cf-family-heading);
+  color: var(--ct-fg);
+  text-wrap: balance;
+}
+.cascade h1 { font-size: var(--cs-size-p4); line-height: var(--cf-h-lead-p4); letter-spacing: var(--cf-h-track-p4); font-weight: 700; margin: var(--cr-space-p4) 0 var(--cr-space-p2); }
+.cascade h2 { font-size: var(--cs-size-p3); line-height: var(--cf-h-lead-p3); letter-spacing: var(--cf-h-track-p3); font-weight: 600; margin: var(--cr-space-p3) 0 var(--cr-space-p1); }
+.cascade h3 { font-size: var(--cs-size-p2); line-height: var(--cf-h-lead-p2); letter-spacing: var(--cf-h-track-p2); font-weight: 600; margin: var(--cr-space-p2) 0 var(--cr-space-0); }
+.cascade h4 { font-size: var(--cs-size-p1); line-height: var(--cf-h-lead-p1); letter-spacing: var(--cf-h-track-p1); font-weight: 600; margin: var(--cr-space-p1) 0 var(--cr-space-0); }
+.cascade :is(h1, h2, h3, h4):first-child { margin-top: 0; }
+
+/* ── Body text steps (text-1 … text-5) as utilities ── */
+.cascade .text-1 { font-size: max(var(--cs-size-n2), var(--cf-size-min)); line-height: var(--cf-lead-n2); letter-spacing: var(--cf-track-n2); color: var(--ct-fg-muted); }
+.cascade .text-2 { font-size: max(var(--cs-size-n1), var(--cf-size-min)); line-height: var(--cf-lead-n1); letter-spacing: var(--cf-track-n1); }
+.cascade .text-3 { font-size: var(--cs-size-0);  line-height: var(--cf-lead-0);  letter-spacing: var(--cf-track-0);  }
+.cascade .text-4 { font-size: var(--cs-size-p1); line-height: var(--cf-lead-p1); letter-spacing: var(--cf-track-p1); }
+.cascade .text-5 { font-size: var(--cs-size-p2); line-height: var(--cf-lead-p2); letter-spacing: var(--cf-track-p2); }
+
+/* ── Inline marks ── */
+.cascade strong, .cascade b { font-weight: 700; }
+.cascade em, .cascade i, .cascade cite { font-style: italic; }
+.cascade small { font-size: var(--cs-size-n1); }
+
+/* link component: underlined, accent color (only links are underlined). */
+.cascade a {
+  color: var(--ct-link);
+  text-decoration: underline;
+  text-decoration-thickness: 0.5pt;
+  text-underline-offset: 0.12em;
+  text-decoration-color: color-mix(in srgb, var(--ct-link) 60%, transparent);
+}
+.cascade a:hover { text-decoration-color: var(--ct-link); }
+
+/* ── Code (code category = mono, sans-text optical) ── */
+.cascade code, .cascade kbd, .cascade samp, .cascade pre {
+  font-family: var(--cf-family-code);
+  color: var(--ct-code-fg);
+  letter-spacing: 0;
+  word-spacing: normal;
+  --cf-xh: 0.53; --cf-kt: 0.030; --cf-lb: 1.45;   /* code profile */
+}
+.cascade :not(pre) > code {
+  font-size: 0.92em;
+  background: var(--ct-code-bg);
+  padding: 0.1em 0.34em;
+  border-radius: 3pt;
+}
+.cascade pre {
+  font-size: var(--cs-size-0);
+  line-height: 1.45;
+  background: var(--ct-code-bg);
+  padding: 1em;
+  border-radius: 4pt;
+  overflow-x: auto;
+  margin: 0 0 var(--cr-baseline);
+}
+.cascade pre code { background: none; padding: 0; font-size: inherit; }
+
+/* ── Quote component (italic, inset, quote background/rule) ── */
+.cascade blockquote {
+  font-style: italic;
+  color: var(--ct-fg);
+  margin: var(--cr-baseline) 0;
+  padding: var(--cr-space-p1) 2em;
+  border-inline-start: 2pt solid var(--ct-quote-rule);
+  background: var(--ct-quote-bg);
+}
+.cascade blockquote > *:last-child { margin-bottom: 0; }
+
+/* ── Lists ── */
+.cascade ul, .cascade ol { margin: 0 0 var(--cr-baseline); padding-inline-start: 1.6em; }
+.cascade li { margin: 0; }
+.cascade li > ul, .cascade li > ol { margin-bottom: 0; }
+
+/* ── Figures + captions (figure-caption = text-1: n2, italic, muted) ── */
+.cascade figure { margin: var(--cr-space-p4) 0; }
+.cascade figure img, .cascade img { max-inline-size: 100%; height: auto; }
+.cascade figcaption {
+  font-size: max(var(--cs-size-n2), var(--cf-size-min));
+  line-height: var(--cf-lead-n2);
+  font-style: italic;
+  color: var(--ct-fg-muted);
+  text-align: center;
+  margin-top: var(--cr-space-0);
+}
+
+/* ── Divider (rule) ── */
+.cascade hr {
+  border: 0;
+  block-size: 0;
+  border-top: 0.5pt solid var(--ct-rule);
+  margin: var(--cr-space-p4) 0;
+}
+
+/* ── Footnote entries (footnote-entry = text-1: n2, muted) ── */
+.cascade .footnotes, .cascade [role="doc-endnotes"] {
+  font-size: max(var(--cs-size-n2), var(--cf-size-min));
+  line-height: var(--cf-lead-n2);
+  color: var(--ct-fg-muted);
+  margin-top: var(--cr-space-p4);
+  border-top: 0.5pt solid var(--ct-rule);
+  padding-top: var(--cr-space-p1);
+}
+
+/* Selection uses the accent, softly. */
+.cascade ::selection { background: color-mix(in srgb, var(--ct-accent) 22%, transparent); }

@@ -1,0 +1,139 @@
+/* cascade-css — sidenotes.css — numbered sidenotes & unnumbered margin notes.
+ *
+ * Ported from edwardtufte/tufte-css, adapted to cascade's tokens. Two layouts,
+ * chosen by a modifier class on the `.cascade.sidenotes` box:
+ *
+ *   .centered  — text stays centered at its measure; notes render as indented
+ *                block asides beneath their reference, at every width.
+ *   .banded    — Tufte's model:
+ *                • wide enough for a margin band — the text column is offset left
+ *                  and notes FLOAT into a reserved right margin (`float`/`clear`,
+ *                  so consecutive notes stack instead of overlapping);
+ *                • too narrow for the band — reverts to a normal centered measure
+ *                  and behaves identically to `.centered` (the shared disclosure
+ *                  below): collapsed markers, click any to open them all.
+ *
+ * Every split is a --sn-* custom property.
+ *
+ * Markup (at the reference, inside the paragraph):
+ *   …text<label for="sn1" class="margin-toggle sidenote-number"></label>
+ *   <input type="checkbox" id="sn1" class="margin-toggle">
+ *   <span class="sidenote">Note text.</span>
+ * Margin note (unnumbered): <label for="mn1" class="margin-toggle">&#8853;</label>,
+ *   a checkbox, then <span class="marginnote">…</span>.
+ * Back-to-back notes at one reference: wrap the run in <span class="note-group">…</span>
+ *   so the markers cluster and the bodies stack as a unit instead of orphaning a marker.
+ *
+ * The wide/narrow split is 62rem. Kept as two non-overlapping media queries so a
+ * marker tapped at a wide width (labels toggle their checkbox even when hidden)
+ * can't drag the tap-to-reveal box into the floated layout.
+ */
+
+.cascade.sidenotes {
+  counter-reset: sidenote-counter;
+
+  /* ── split parameters (consumed by .banded, wide) ─────────────────────── */
+  --sn-band-width: 87.5%;   /* full block width: text column + note margin     */
+  --sn-offset:     12.5%;   /* left padding that shifts the text column right   */
+  --sn-text:       55%;     /* text column width                               */
+  --sn-note:       50%;     /* note width (of the text column)                 */
+  --sn-pull:       -60%;    /* note margin-right — how far it floats into band  */
+
+  /* ── shared note parameters ───────────────────────────────────────────── */
+  --sn-gap:    0.3rem;      /* space above a note                              */
+  --sn-indent: 1rem;        /* aside indent (centered / tap-revealed)          */
+}
+
+/* ── reference markers ───────────────────────────────────────────────────────
+ * The checkbox is never shown; its <label> is the visible, tappable marker — and
+ * must stay displayed, since a display:none label would not increment the
+ * counter (which is what left the note prefixed "0"). */
+input.margin-toggle { display: none; }
+.sidenote-number { counter-increment: sidenote-counter; position: relative; }
+.cascade.sidenotes label.sidenote-number { cursor: pointer; }
+.sidenote-number::after {
+  content: counter(sidenote-counter);
+  font-size: 0.62em; vertical-align: super;
+  color: var(--ct-link); margin-inline: 0.35em;   /* breathing room so back-to-back markers don't read as one number */
+}
+.cascade.sidenotes .sidenote::before {
+  content: counter(sidenote-counter) "\2002";
+  font-size: 0.72em; vertical-align: super; color: var(--ct-link);
+}
+/* Unnumbered margin-note marker: the ⊕ label, inline as a small superscript. */
+.cascade.sidenotes label.margin-toggle:not(.sidenote-number) {
+  cursor: pointer; font-size: 0.72em; vertical-align: super;
+  color: var(--ct-link); margin-inline: 0.3em;
+}
+
+/* ── note typography (shared) ────────────────────────────────────────────── */
+.cascade.sidenotes .sidenote,
+.cascade.sidenotes .marginnote {
+  font-size: max(var(--cs-size-n2), var(--cf-size-min));
+  line-height: var(--cf-lead-n2);
+  color: var(--ct-fg-muted);
+}
+
+/* ── DISCLOSURE (shared base) ────────────────────────────────────────────────
+ * Notes collapse to their markers; clicking any marker opens them ALL as indented
+ * asides, clicking again closes them (pure CSS — one checkbox flips the shared
+ * `:has()` state, so back-to-back markers behave as a set instead of toggling one
+ * note out of a pair). This is the behavior for `.centered` at every width AND for
+ * `.banded` once it's too narrow for a margin band — below that width the two modes
+ * are deliberately identical. The wide banded float (further down) overrides it. */
+.cascade.sidenotes .sidenote,
+.cascade.sidenotes .marginnote { display: none; }
+.cascade.sidenotes:has(.margin-toggle:checked) .sidenote,
+.cascade.sidenotes:has(.margin-toggle:checked) .marginnote {
+  display: block;
+  margin: var(--sn-gap) 0 var(--cr-baseline);
+  padding-inline-start: var(--sn-indent);
+  border-inline-start: 2px solid var(--ct-rule);
+}
+
+/* Note group: a run of back-to-back notes at one reference. `display: contents`
+ * makes the wrapper transparent by default (banded float works, and the DOM stays
+ * marker→body→marker→body so the counter numbers correctly). When opened it becomes
+ * a flex block: `order` clusters the markers on one line and stacks the bodies
+ * beneath (flex order is visual only, so numbering is untouched) — no orphaned
+ * marker. `gap` spaces the stacked bodies. */
+.note-group { display: contents; }
+.cascade.sidenotes:has(.margin-toggle:checked) .note-group {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: var(--sn-gap) 0;
+  margin: var(--sn-gap) 0 var(--cr-baseline);
+}
+.cascade.sidenotes:has(.margin-toggle:checked) .note-group > .sidenote-number { order: 0; }
+.cascade.sidenotes:has(.margin-toggle:checked) .note-group > .sidenote {
+  order: 1; flex-basis: 100%; margin: 0;
+}
+
+/* ── BANDED, wide (≥ 62rem): offset text column + notes floated into the band ──
+ * The only override of the disclosure above. Its `:has(:checked)` variants match
+ * the opened state too, so a marker tapped at a wide width can't pull a note out of
+ * the float (labels toggle their checkbox even when the note is floated). */
+@media (min-width: 62rem) {
+  .cascade.sidenotes.banded {
+    box-sizing: content-box;
+    max-inline-size: none;
+    width: var(--sn-band-width);
+    margin-inline: auto;
+    padding-left: var(--sn-offset);
+    padding-right: 0;
+  }
+  .cascade.sidenotes.banded > *:not(.sidenote):not(.marginnote) {
+    width: var(--sn-text);
+    max-inline-size: none;
+  }
+  .cascade.sidenotes.banded .sidenote,
+  .cascade.sidenotes.banded .marginnote,
+  .cascade.sidenotes.banded:has(.margin-toggle:checked) .sidenote,
+  .cascade.sidenotes.banded:has(.margin-toggle:checked) .marginnote {
+    display: block; float: right; clear: right;
+    width: var(--sn-note);
+    margin: var(--sn-gap) var(--sn-pull) 0 0;
+    padding: 0; border: 0;
+  }
+  /* keep the group transparent when opened at a wide width, so notes still float */
+  .cascade.sidenotes.banded:has(.margin-toggle:checked) .note-group { display: contents; }
+}

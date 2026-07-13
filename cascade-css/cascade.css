@@ -1,0 +1,29 @@
+/* cascade-css — the entire cascade typography system, ported to CSS.
+ *
+ * A faithful port of the cascade Typst library (../cascade-typst):
+ *   theme  — semantic color tokens, light + auto-derived dark
+ *   scale  — fluid modular scale (all 7 presets) via pow()
+ *   font   — optical profile (size-dependent tracking / leading / word-space)
+ *   rhythm — spacing scale derived from the base
+ *   layout — native HTML elements bound to cascade components
+ *
+ * Usage:
+ *   <link rel="stylesheet" href="cascade.css">
+ *   <article class="cascade"> … your content … </article>
+ *
+ * Switch scale / profile / theme with a class or attribute on the .cascade box:
+ *   <article class="cascade scale-golden-ditonic profile-serif-text">
+ *   <article class="cascade" data-theme="dark">
+ *
+ * Tweak anything by overriding a custom property, e.g.:
+ *   .cascade { --cs-base: clamp(1.2rem, 1rem + 0.6vw, 1.5rem); --cf-measure: 85; }
+ *
+ * Requires modern CSS — pow(), log(), and relative color syntax
+ * (Chrome/Edge 111+, Safari 15.4+, Firefox 118+).
+ */
+
+@import "theme.css";
+@import "scale.css";
+@import "font.css";
+@import "rhythm.css";
+@import "layout.css";

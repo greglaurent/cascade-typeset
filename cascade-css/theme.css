@@ -1,0 +1,59 @@
+/* cascade-css — theme.css  (GENERATED from tokens.mjs by `just gen` — do not edit by hand)
+ * Semantic color tokens. Light is the source; dark is cascade's derive-dark (HSL
+ * lightness flipped), precomputed to hex here. Dark applies on the system pref or
+ * [data-theme="dark"]; [data-theme="light"] forces light. Derived tokens live on
+ * .cascade so they recompute from whatever base is active for that container.
+ */
+
+/* ── base tokens: light (default) ── */
+:root {
+  --ct-fg:        #1A1A1A;
+  --ct-fg-muted:  #525250;
+  --ct-fg-subtle: #6C6C69;
+  --ct-bg:        #F8F7F2;
+  --ct-bg-subtle: #F0EEE7;
+  --ct-accent:    #1F3A5F;
+  --ct-rule:      #8E8E8A;
+}
+
+/* ── base tokens: dark (system preference) ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ct-fg:        #E5E5E5;
+    --ct-fg-muted:  #AFAFAD;
+    --ct-fg-subtle: #969693;
+    --ct-bg:        #0D0C07;
+    --ct-bg-subtle: #18160F;
+    --ct-accent:    #A0BBE0;
+    --ct-rule:      #757571;
+  }
+}
+
+/* ── explicit overrides on any element (win over system pref) ── */
+[data-theme="light"] {
+  --ct-fg:        #1A1A1A;
+  --ct-fg-muted:  #525250;
+  --ct-fg-subtle: #6C6C69;
+  --ct-bg:        #F8F7F2;
+  --ct-bg-subtle: #F0EEE7;
+  --ct-accent:    #1F3A5F;
+  --ct-rule:      #8E8E8A;
+}
+[data-theme="dark"] {
+  --ct-fg:        #E5E5E5;
+  --ct-fg-muted:  #AFAFAD;
+  --ct-fg-subtle: #969693;
+  --ct-bg:        #0D0C07;
+  --ct-bg-subtle: #18160F;
+  --ct-accent:    #A0BBE0;
+  --ct-rule:      #757571;
+}
+
+/* ── derived tokens: resolve from whatever base is active on this container ── */
+.cascade {
+  --ct-link:       var(--ct-accent);
+  --ct-code-fg:    var(--ct-fg);
+  --ct-code-bg:    var(--ct-bg-subtle);
+  --ct-quote-rule: var(--ct-fg-muted);
+  --ct-quote-bg:   transparent;
+}

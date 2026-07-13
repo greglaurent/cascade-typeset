@@ -1,0 +1,22 @@
+/* cascade-css — fonts/lora.css  (GENERATED from tokens.mjs by `just gen` — do not edit by hand)
+ * Font-specific preset for Lora: sets the family AND the optical variables
+ * that depend on this typeface (mirror of cascade's font.bundles.lora).
+ * Measured (OS/2, unitsPerEm 1000): x-height 0.5 (sxHeight 500), cap-height 0.7,
+ * typo asc/desc 1.006 / -0.274. x-height is MEASURED; the rest starts from the
+ * serif-text profile. Load AFTER cascade.css.
+ */
+
+.cascade.bundle-lora {
+  --cf-family-body: "Lora", Georgia, "Times New Roman", serif;
+  --cf-xh:  0.5;
+  --cf-kt:  0.022;
+  --cf-lb:  1.38;
+  --cf-bws: 0.28;
+}
+
+.cascade.heading-lora {
+  --cf-family-heading: "Lora", Georgia, "Times New Roman", serif;
+  --cf-h-xh: 0.5;
+  --cf-h-kt: 0.022;
+  --cf-h-lb: 1.38;
+}

@@ -1,0 +1,21 @@
+/* cascade-css — rhythm.css  (GENERATED from tokens.mjs by `just gen` — do not edit by hand)
+ * Vertical rhythm: spacing scale derived from the fluid base (unit = base · factor),
+ * so all spacing scales with the type. Multipliers match cascade/rhythm.typ; baseline
+ * = one body line.
+ */
+
+.cascade {
+  --cr-unit: calc(var(--cs-base) * 0.375);
+
+  --cr-space-n1: calc(var(--cr-unit) * 0.5);
+  --cr-space-0:  calc(var(--cr-unit) * 1);
+  --cr-space-p1: calc(var(--cr-unit) * 2);
+  --cr-space-p2: calc(var(--cr-unit) * 3);
+  --cr-space-p3: calc(var(--cr-unit) * 4);
+  --cr-space-p4: calc(var(--cr-unit) * 6);
+  --cr-space-p5: calc(var(--cr-unit) * 8);
+  --cr-space-p6: calc(var(--cr-unit) * 12);
+
+  /* One body line — paragraph separation (matches the layout.typ rhythm fix). */
+  --cr-baseline: calc(var(--cs-base) * var(--cf-lead-0));
+}

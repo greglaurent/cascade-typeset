@@ -1,0 +1,95 @@
+/* cascade-css — font.css  (GENERATED from tokens.mjs by `just gen` — do not edit by hand)
+ * Font families (per category) + the optical profile: size-dependent tracking,
+ * leading, word-space. Families are per category (body / heading / code) so a
+ * serif body can pair with sans headings. Optical formulas (cascade's optical-size
+ * is reinterpreted as the body base, so ln(size/optical) → (step/n)·ln(ratio)):
+ *   tracking_em(i) = clamp(±tc,  -kt · (i/n) · ln(ratio))
+ *   line-height(i) = clamp(lmin, lb + (measure-65)·0.006 − (xh−0.5)·0.8 − 0.10·(i/n)·ln(ratio),  lmax)
+ *   word_space(i)  = (bws − kws · (i/n) · ln(ratio)) em
+ */
+
+.cascade {
+  /* ── Font stacks ── */
+  --cf-font-serif: "Libertinus Serif", Georgia, "Times New Roman", serif;
+  --cf-font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --cf-font-mono: "DejaVu Sans Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* ── Active family per category ── */
+  --cf-family-body:    var(--cf-font-serif);
+  --cf-family-heading: var(--cf-family-body);   /* default: same as body */
+  --cf-family-code:    var(--cf-font-mono);
+
+  /* ── Body optical params (default: serif) ── */
+  --cf-xh: 0.49;
+  --cf-kt: 0.022;
+  --cf-lb: 1.35;
+  --cf-bws: 0.28;
+  --cf-kws: 0.04;
+  --cf-tc: 0.04;
+  --cf-lmin: 1.2;
+  --cf-lmax: 1.45;
+  --cf-measure: 65;
+  --cf-size-min: 0.75rem;   /* readability floor for small roles */
+  --cf-lead0: calc(var(--cf-lb) + (var(--cf-measure) - 65) * 0.006 - (var(--cf-xh) - 0.5) * 0.8);
+
+  /* ── Heading optical params (default: = body) ── */
+  --cf-h-xh: var(--cf-xh);
+  --cf-h-kt: var(--cf-kt);
+  --cf-h-lb: var(--cf-lb);
+  --cf-h-lead0: calc(var(--cf-h-lb) + (var(--cf-measure) - 65) * 0.006 - (var(--cf-h-xh) - 0.5) * 0.8);
+
+  /* ── body tracking per step (em) ── */
+  --cf-track-n5: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) * -5 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-n4: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) * -4 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-n3: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) * -3 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-n2: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) * -2 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-n1: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) * -1 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-0:  0em;
+  --cf-track-p1: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) *  1 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-p2: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) *  2 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-p3: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) *  3 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-p4: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) *  4 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-track-p5: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) *  5 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+
+  /* ── body line-height per step (unitless, clamped) ── */
+  --cf-lead-n5: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 * -5 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-n4: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 * -4 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-n3: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 * -3 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-n2: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 * -2 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-n1: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 * -1 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-0:  clamp(var(--cf-lmin), var(--cf-lead0), var(--cf-lmax));
+  --cf-lead-p1: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 *  1 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-p2: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 *  2 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-p3: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 *  3 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-p4: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 *  4 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-lead-p5: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 *  5 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+
+  /* ── heading tracking + line-height (p1..p4 = h4..h1) ── */
+  --cf-h-track-p1: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-h-kt) * 1 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-h-track-p2: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-h-kt) * 2 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-h-track-p3: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-h-kt) * 3 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-h-track-p4: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-h-kt) * 4 / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+  --cf-h-lead-p1: clamp(var(--cf-lmin), calc(var(--cf-h-lead0) - 0.10 * 1 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-h-lead-p2: clamp(var(--cf-lmin), calc(var(--cf-h-lead0) - 0.10 * 2 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-h-lead-p3: clamp(var(--cf-lmin), calc(var(--cf-h-lead0) - 0.10 * 3 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+  --cf-h-lead-p4: clamp(var(--cf-lmin), calc(var(--cf-h-lead0) - 0.10 * 4 / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+
+  /* ── word-space (body, step 0) ── */
+  --cf-ws-0: calc(var(--cf-bws) * 1em);
+}
+
+/* ── Body optical profiles — class on the .cascade box ── */
+.cascade.profile-sans-ui { --cf-xh: 0.53; --cf-kt: 0.035; --cf-lb: 1.45; --cf-bws: 0.25; }
+.cascade.profile-sans-text { --cf-xh: 0.53; --cf-kt: 0.03; --cf-lb: 1.45; --cf-bws: 0.28; }
+.cascade.profile-serif-text { --cf-xh: 0.49; --cf-kt: 0.022; --cf-lb: 1.35; --cf-bws: 0.28; }
+.cascade.profile-sf-pro { --cf-xh: 0.53; --cf-kt: 0.045; --cf-lb: 1.45; --cf-bws: 0.25; }
+
+/* ── Body bundles (family + optical) ── */
+.cascade.bundle-serif { --cf-family-body: var(--cf-font-serif); --cf-xh: 0.49; --cf-kt: 0.022; --cf-lb: 1.35; --cf-bws: 0.28; }
+.cascade.bundle-sans { --cf-family-body: var(--cf-font-sans); --cf-xh: 0.53; --cf-kt: 0.03; --cf-lb: 1.45; --cf-bws: 0.28; }
+.cascade.bundle-mono { --cf-family-body: var(--cf-font-mono); --cf-xh: 0.53; --cf-kt: 0.03; --cf-lb: 1.45; --cf-bws: 0.28; }
+
+/* ── Heading bundles (heading family + heading optical) ── */
+.cascade.heading-serif { --cf-family-heading: var(--cf-font-serif); --cf-h-xh: 0.49; --cf-h-kt: 0.022; --cf-h-lb: 1.35; }
+.cascade.heading-sans { --cf-family-heading: var(--cf-font-sans); --cf-h-xh: 0.53; --cf-h-kt: 0.03; --cf-h-lb: 1.45; }
+.cascade.heading-mono { --cf-family-heading: var(--cf-font-mono); --cf-h-xh: 0.53; --cf-h-kt: 0.03; --cf-h-lb: 1.45; }

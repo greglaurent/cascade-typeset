@@ -1,0 +1,36 @@
+/* cascade-css — scale.css  (GENERATED from tokens.mjs by `just gen` — do not edit by hand)
+ * Fluid typographic scale:  f_i = base · ratio^(i/n). Pick a preset (sets
+ * --cs-ratio/--cs-n) and a fluid --cs-base; every step derives via pow(). Because
+ * --cs-base is a clamp(), the whole scale tracks the viewport (Utopia-style).
+ * Requires pow()/log(): Chrome/Edge 111+, Safari 15.4+, Firefox 118+.
+ */
+
+.cascade {
+  --cs-base: clamp(1.125rem, 1.02rem + 0.42vw, 1.375rem);
+
+  /* Default preset: classical. Override with a .scale-* class. */
+  --cs-ratio: 2;
+  --cs-n: 5;
+  --cs-ln-ratio: log(var(--cs-ratio));   /* natural log; recomputes with --cs-ratio */
+
+  --cs-size-n5: calc(var(--cs-base) * pow(var(--cs-ratio), calc(-5 / var(--cs-n))));
+  --cs-size-n4: calc(var(--cs-base) * pow(var(--cs-ratio), calc(-4 / var(--cs-n))));
+  --cs-size-n3: calc(var(--cs-base) * pow(var(--cs-ratio), calc(-3 / var(--cs-n))));
+  --cs-size-n2: calc(var(--cs-base) * pow(var(--cs-ratio), calc(-2 / var(--cs-n))));
+  --cs-size-n1: calc(var(--cs-base) * pow(var(--cs-ratio), calc(-1 / var(--cs-n))));
+  --cs-size-0:  var(--cs-base);
+  --cs-size-p1: calc(var(--cs-base) * pow(var(--cs-ratio), calc( 1 / var(--cs-n))));
+  --cs-size-p2: calc(var(--cs-base) * pow(var(--cs-ratio), calc( 2 / var(--cs-n))));
+  --cs-size-p3: calc(var(--cs-base) * pow(var(--cs-ratio), calc( 3 / var(--cs-n))));
+  --cs-size-p4: calc(var(--cs-base) * pow(var(--cs-ratio), calc( 4 / var(--cs-n))));
+  --cs-size-p5: calc(var(--cs-base) * pow(var(--cs-ratio), calc( 5 / var(--cs-n))));
+}
+
+/* ── Scale presets — add as a class on the .cascade box ── */
+.cascade.scale-classical { --cs-ratio: 2; --cs-n: 5; }
+.cascade.scale-golden-ratio { --cs-ratio: 1.618033988749895; --cs-n: 1; }
+.cascade.scale-golden-ditonic { --cs-ratio: 1.618033988749895; --cs-n: 2; }
+.cascade.scale-tritonic { --cs-ratio: 2; --cs-n: 3; }
+.cascade.scale-tetratonic { --cs-ratio: 2; --cs-n: 4; }
+.cascade.scale-major-third { --cs-ratio: 1.25; --cs-n: 1; }
+.cascade.scale-minor-third { --cs-ratio: 1.2; --cs-n: 1; }
