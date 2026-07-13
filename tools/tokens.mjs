@@ -121,6 +121,13 @@ export const fonts = {
       // x-height matches a lower one (e.g. Lora 0.50). Omit to skip.
       normalize: { alias: 'Inter xh-normalized', toXHeight: 0.50, sizeAdjust: '91.6%', ascent: '90%', descent: '22%' },
     },
+    jost: {
+      family:   { typst: 'Jost', css: '"Jost", "Century Gothic", system-ui, sans-serif' },
+      category: 'sans',   // geometric sans; note the low measured x-height (0.46)
+      // x-height MEASURED (OS/2); rest derived from the sans-text profile — tune to taste.
+      profile:  { opticalSize: '12pt', xHeight: 0.46, kTracking: 0.030, leadingBase: 1.45, wordSpace: 0.28 },
+      measured: { xHeight: 0.46, capHeight: 0.70, unitsPerEm: 1000, sx: 'sxHeight 460', asc: '1.07', desc: '-0.375' },
+    },
   },
 };
 

@@ -16,8 +16,8 @@ const types: Record<string, string> = {
 // reaches the typst CLI.
 const ALLOW: Record<string, string[]> = {
   scale:   ["classical", "golden-ratio", "golden-ditonic", "tritonic", "tetratonic", "major-third", "minor-third"],
-  body:    ["serif", "sans", "mono", "lora", "inter"],
-  heading: ["", "serif", "sans", "mono", "lora", "inter"],
+  body:    ["serif", "sans", "mono", "lora", "inter", "jost"],
+  heading: ["", "serif", "sans", "mono", "lora", "inter", "jost"],
   theme:   ["light", "dark"],
   sidenotes: ["false", "true"],   // margin edition vs. footnotes (viewer's notes selector)
 };

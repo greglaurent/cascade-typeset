@@ -67,6 +67,7 @@
   // Font-specific profiles — x-height MEASURED from the font's OS/2 table.
   lora:       make(optical-size: 11pt, x-height: 0.5, k-tracking: 0.022, leading-base: 1.38, base-word-space: 0.28),
   inter:      make(optical-size: 12pt, x-height: 0.546, k-tracking: 0.03, leading-base: 1.45, base-word-space: 0.26),
+  jost:       make(optical-size: 12pt, x-height: 0.46, k-tracking: 0.03, leading-base: 1.45, base-word-space: 0.28),
 )
 
 #let bundles = (
@@ -96,5 +97,10 @@
     family:  "Inter",
     scale:   scale.presets.classical,
     profile: presets.inter,
+  ),
+  jost: (
+    family:  "Jost",
+    scale:   scale.presets.classical,
+    profile: presets.jost,
   ),
 )
