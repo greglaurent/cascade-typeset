@@ -9,11 +9,20 @@ default:
     @just --list
 
 # Symlink the Typst library into Typst's local-package namespace so
-# `#import "@local/cascade:0.1.0"` resolves. Idempotent; nix does this declaratively.
+# `#import "@local/cascade:0.1.0"` resolves. Idempotent. NO-OP on NixOS: there the
+# symlink is owned declaratively by the nixos config (modules/home/typst.nix), and
+# creating it here would fight home-manager activation ("would be clobbered").
 link:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -e /run/current-system/nixos-version ] || grep -qs '^ID=nixos' /etc/os-release; then
+        echo "NixOS detected — skipping: @local/cascade:0.1.0 is managed by the nixos"
+        echo "config (modules/home/typst.nix). Nothing to do."
+        exit 0
+    fi
     mkdir -p ~/.local/share/typst/packages/local/cascade
     ln -sfn "{{justfile_directory()}}/cascade-typst" ~/.local/share/typst/packages/local/cascade/0.1.0
-    @echo "linked @local/cascade:0.1.0 → cascade-typst/"
+    echo "linked @local/cascade:0.1.0 → cascade-typst/"
 
 # Regenerate the token-driven parts of both renderers from tools/tokens.mjs.
 gen:
