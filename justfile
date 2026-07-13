@@ -1,13 +1,19 @@
 # cascade-typeset — one typography system, two renderers (Typst + CSS).
 #
 # `@local/cascade:0.1.0` (so `#import "@local/cascade:0.1.0"` resolves to this repo)
-# is provided declaratively by the nixos config (modules/home/typst.nix). On a
-# non-nix machine, symlink cascade-typst/ into Typst's local-package namespace:
-#   ln -s "$PWD/cascade-typst" ~/.local/share/typst/packages/local/cascade/0.1.0
+# is provided declaratively by the nixos config (modules/home/typst.nix); on a
+# non-nix machine, run `just link`.
 
 # Default recipe: list available recipes.
 default:
     @just --list
+
+# Symlink the Typst library into Typst's local-package namespace so
+# `#import "@local/cascade:0.1.0"` resolves. Idempotent; nix does this declaratively.
+link:
+    mkdir -p ~/.local/share/typst/packages/local/cascade
+    ln -sfn "{{justfile_directory()}}/cascade-typst" ~/.local/share/typst/packages/local/cascade/0.1.0
+    @echo "linked @local/cascade:0.1.0 → cascade-typst/"
 
 # Regenerate the token-driven parts of both renderers from tools/tokens.mjs.
 gen:
