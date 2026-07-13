@@ -1,0 +1,22 @@
+/* cascade-css — fonts/jost.css  (GENERATED from tokens.mjs by `just gen` — do not edit by hand)
+ * Font-specific preset for Jost: sets the family AND the optical variables
+ * that depend on this typeface (mirror of cascade's font.bundles.jost).
+ * Measured (OS/2, unitsPerEm 1000): x-height 0.46 (sxHeight 460), cap-height 0.7,
+ * typo asc/desc 1.07 / -0.375. x-height is MEASURED; the rest starts from the
+ * sans-text profile. Load AFTER cascade.css.
+ */
+
+.cascade.bundle-jost {
+  --cf-family-body: "Jost", "Century Gothic", system-ui, sans-serif;
+  --cf-xh:  0.46;
+  --cf-kt:  0.03;
+  --cf-lb:  1.45;
+  --cf-bws: 0.28;
+}
+
+.cascade.heading-jost {
+  --cf-family-heading: "Jost", "Century Gothic", system-ui, sans-serif;
+  --cf-h-xh: 0.46;
+  --cf-h-kt: 0.03;
+  --cf-h-lb: 1.45;
+}

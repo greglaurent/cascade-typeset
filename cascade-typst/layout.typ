@@ -166,7 +166,14 @@
   let body-bundle = resolved-fonts.body
   let r = rhythm.make(scale: body-bundle.scale, font: body-bundle.profile, measure: measure)
   let specs = _build-specs(theme, r.spacing)
-  let sidenote-page = if sidenotes { (margin: (left: 1in, right: 2.5in, y: 1in)) } else { (:) }
+  // Sidenote page: the outer (right) margin is the note band. Derived from the reading
+  // measure (`measure` chars at the body size, ~0.5em each) rather than a frozen 2.5in,
+  // so it scales with `measure` and `base`. The band is half the measure — mirroring the
+  // CSS note = 50% of the column. Left/top/bottom keep the base page margin.
+  let _measure-width = measure * 0.5 * base                     // the measure, as a length (≈ 4.97in default)
+  let sidenote-page = if sidenotes {
+    (margin: (left: _default-page.margin, right: _measure-width * 0.5, y: _default-page.margin))
+  } else { (:) }
   let merged-page = _default-page + (fill: theme.bg) + sidenote-page + page
 
   let result = (:)

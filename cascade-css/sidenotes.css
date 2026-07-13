@@ -32,16 +32,19 @@
 .cascade.sidenotes {
   counter-reset: sidenote-counter;
 
-  /* ── split parameters (consumed by .banded, wide) ─────────────────────── */
-  --sn-band-width: 87.5%;   /* full block width: text column + note margin     */
-  --sn-offset:     12.5%;   /* left padding that shifts the text column right   */
-  --sn-text:       55%;     /* text column width                               */
-  --sn-note:       50%;     /* note width (of the text column)                 */
-  --sn-pull:       -60%;    /* note margin-right — how far it floats into band  */
+  /* ── split parameters — every value is a root knob, a derivation of one, or a
+   *    rhythm token: no orphan literals, defaults unchanged. Roots: band-width,
+   *    text, note, note-gap. `offset` and `pull` derive from them; the spacing
+   *    lengths ride the type's vertical-rhythm grid, so they scale with the scale. */
+  --sn-band-width: 87.5%;                                            /* band width, of the viewport      */
+  --sn-offset:     calc(100% - var(--sn-band-width));                /* left offset = remainder → 12.5%  */
+  --sn-text:       55%;                                              /* reading column, of the band      */
+  --sn-note:       50%;                                              /* note width, of the column        */
+  --sn-note-gap:   10%;                                              /* column↔note clearance, of column */
+  --sn-pull:       calc(-1 * (var(--sn-note) + var(--sn-note-gap))); /* float into the band → -60%       */
 
-  /* ── shared note parameters ───────────────────────────────────────────── */
-  --sn-gap:    0.3rem;      /* space above a note                              */
-  --sn-indent: 1rem;        /* aside indent (centered / tap-revealed)          */
+  --sn-gap:    var(--cr-space-n1);   /* space above a note — one rhythm step (≈ 0.3rem)  */
+  --sn-indent: var(--cr-space-p1);   /* aside indent — two rhythm units (≈ 1rem)         */
 }
 
 /* ── reference markers ───────────────────────────────────────────────────────
