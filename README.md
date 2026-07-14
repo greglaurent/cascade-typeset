@@ -62,7 +62,7 @@ Font-specific presets pin a typeface's **measured** optical metrics (x-height,
 tracking, word-space) so leading and spacing are tuned per face rather than to a
 generic profile. Add one to `tokens.fonts.presets` (x-height from `fonttools`'
 OS/2 read) and `just gen` emits both the Typst bundle and `cascade-css/fonts/<name>.css`
-— guaranteed in sync. Lora and Inter ship as the first two prototypes.
+— guaranteed in sync. Lora (serif), Inter (sans), and Jost (geometric sans) ship as presets.
 
 ## Sidenotes & margin notes (Tufte, opt-in)
 

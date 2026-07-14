@@ -46,7 +46,7 @@
 #import "rhythm.typ"
 #import "theme.typ"
 #import "utils.typ"
-#import "@preview/marge:0.1.0": sidenote as _marge-note   // Tufte margin notes (roadmap #5)
+#import "@preview/marge:0.1.0": sidenote as _marge-note   // margin-note placement (l.sidenote / l.marginnote)
 
 // Capture scale.make + scale.presets at module load so they survive `scale` shadowing inside make().
 #let _scale-make = scale.make

@@ -228,13 +228,13 @@
     tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.src === src)));
     opts.hidden = !css;
     compileBtn.hidden = css;      // Compile takes the Options slot on the Typst tab
-    if (!css) { opts.open = false; updateCompile(); }
+    if (!css) { closeMenu(); updateCompile(); }
     location.hash = css ? 'css' : 'typst';
   };
   tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.src)));
 
   // Close the dropdown on an outside click.
-  document.addEventListener('click', e => { if (opts.open && !opts.contains(e.target)) opts.open = false; });
+  document.addEventListener('click', e => { if (opts.open && !opts.contains(e.target)) closeMenu(); });
 
   // Default theme to the system preference, then show the initial tab.
   setTheme(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');

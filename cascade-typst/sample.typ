@@ -104,7 +104,7 @@ Put plainly, the process is short:
 #figure(
   caption: [Figure 1. A figure with its caption set in the caption style.],
 )[
-  #rect(width: 100%, height: 3.5cm, fill: luma(80%), stroke: none)
+  #rect(width: 100%, height: 3.5cm, fill: l.theme.bg-subtle, stroke: none)
 ]
 
 #divider()

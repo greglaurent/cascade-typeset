@@ -44,13 +44,20 @@ Add a class or attribute to the `.cascade` box; everything recomputes:
   `scale-golden-ditonic` · `scale-tritonic` · `scale-tetratonic` ·
   `scale-major-third` · `scale-minor-third`
 - **bundles** (body family + optical profile, the visible "style" switch, =
-  cascade's `font.bundles`): `bundle-serif` (default) · `bundle-sans` · `bundle-mono`
+  cascade's `font.bundles`): generic `bundle-serif` (default) · `bundle-sans` ·
+  `bundle-mono`; and the measured font presets `bundle-lora` · `bundle-inter` ·
+  `bundle-jost` — each needs its `fonts/<name>.css` loaded (see below)
 - **heading bundles** (heading family + its optical profile — pair with a body
-  bundle for serif/sans mixes): `heading-serif` · `heading-sans` · `heading-mono`
+  bundle for serif/sans mixes): `heading-serif` · `heading-sans` · `heading-mono`,
+  plus `heading-lora` · `heading-inter` · `heading-jost`
   (e.g. `class="cascade bundle-serif heading-sans"` = serif body, sans headings)
 - **profiles** (body optical only — tracking/leading/word-space, no family change):
   `profile-serif-text` · `profile-sans-text` · `profile-sans-ui` · `profile-sf-pro`
 - **theme:** `data-theme="light"` / `data-theme="dark"` (defaults to system pref)
+- **font presets:** the font-specific `bundle-*` / `heading-*` classes need their preset
+  stylesheet loaded — e.g. `<link rel="stylesheet" href="fonts/jost.css">` (likewise
+  `lora.css`, `inter.css`) — which sets the family and that face's measured optical
+  metrics. The typeface itself must be installed/available.
 
 ## Tweak anything
 

@@ -1,41 +1,30 @@
 /* cascade-css — sidenotes.css — numbered sidenotes & unnumbered margin notes.
  *
- * Ported from edwardtufte/tufte-css, adapted to cascade's tokens. Two layouts,
- * chosen by a modifier class on the `.cascade.sidenotes` box:
+ * Ported from edwardtufte/tufte-css, adapted to cascade's tokens. A modifier class on
+ * the `.cascade.sidenotes` box picks the layout:
+ *   .centered — notes collapse to their markers; clicking any marker opens them all as
+ *               indented block asides (a pure-CSS :has() disclosure). Works at any width.
+ *   .banded   — wide enough (≥62rem): the text column offsets left and notes FLOAT into a
+ *               reserved right margin (float/clear stacks them). Narrower: reverts to the
+ *               .centered disclosure.
  *
- *   .centered  — text stays centered at its measure; notes render as indented
- *                block asides beneath their reference, at every width.
- *   .banded    — Tufte's model:
- *                • wide enough for a margin band — the text column is offset left
- *                  and notes FLOAT into a reserved right margin (`float`/`clear`,
- *                  so consecutive notes stack instead of overlapping);
- *                • too narrow for the band — reverts to a normal centered measure
- *                  and behaves identically to `.centered` (the shared disclosure
- *                  below): collapsed markers, click any to open them all.
+ * Every value is a --sn-* custom property (see the param block below).
  *
- * Every split is a --sn-* custom property.
- *
- * Markup (at the reference, inside the paragraph):
+ * Markup, at the reference inside the paragraph:
  *   …text<label for="sn1" class="margin-toggle sidenote-number"></label>
- *   <input type="checkbox" id="sn1" class="margin-toggle">
- *   <span class="sidenote">Note text.</span>
- * Margin note (unnumbered): <label for="mn1" class="margin-toggle">&#8853;</label>,
- *   a checkbox, then <span class="marginnote">…</span>.
- * Back-to-back notes at one reference: wrap the run in <span class="note-group">…</span>
- *   so the markers cluster and the bodies stack as a unit instead of orphaning a marker.
- *
- * The wide/narrow split is 62rem. Kept as two non-overlapping media queries so a
- * marker tapped at a wide width (labels toggle their checkbox even when hidden)
- * can't drag the tap-to-reveal box into the floated layout.
+ *   <input type="checkbox" id="sn1" class="margin-toggle"><span class="sidenote">Note.</span>
+ * Margin note (unnumbered): <label for="mn1" class="margin-toggle">&#8853;</label>, a
+ *   checkbox, then <span class="marginnote">…</span>.
+ * Back-to-back notes: wrap the run in <span class="note-group">…</span> so the markers
+ *   cluster and the bodies stack as a unit (see the note-group rule).
  */
 
 .cascade.sidenotes {
   counter-reset: sidenote-counter;
 
-  /* ── split parameters — every value is a root knob, a derivation of one, or a
-   *    rhythm token: no orphan literals, defaults unchanged. Roots: band-width,
-   *    text, note, note-gap. `offset` and `pull` derive from them; the spacing
-   *    lengths ride the type's vertical-rhythm grid, so they scale with the scale. */
+  /* Split parameters — roots + derivations, no orphan literals. `offset` and `pull`
+     derive from the others; the spacing lengths ride the rhythm grid, so the geometry
+     scales with the type while the defaults stay unchanged. */
   --sn-band-width: 87.5%;                                            /* band width, of the viewport      */
   --sn-offset:     calc(100% - var(--sn-band-width));                /* left offset = remainder → 12.5%  */
   --sn-text:       55%;                                              /* reading column, of the band      */
@@ -43,33 +32,32 @@
   --sn-note-gap:   10%;                                              /* column↔note clearance, of column */
   --sn-pull:       calc(-1 * (var(--sn-note) + var(--sn-note-gap))); /* float into the band → -60%       */
 
-  --sn-gap:    var(--cr-space-n1);   /* space above a note — one rhythm step (≈ 0.3rem)  */
-  --sn-indent: var(--cr-space-p1);   /* aside indent — two rhythm units (≈ 1rem)         */
+  --sn-gap:        var(--cr-space-n1);   /* space above a note (one rhythm step)   */
+  --sn-indent:     var(--cr-space-p1);   /* aside indent (two rhythm units, ≈1rem) */
+  --sn-mark-space: 0.35em;               /* breathing room around a marker         */
 }
 
-/* ── reference markers ───────────────────────────────────────────────────────
- * The checkbox is never shown; its <label> is the visible, tappable marker — and
- * must stay displayed, since a display:none label would not increment the
- * counter (which is what left the note prefixed "0"). */
+/* ── Reference markers. The checkbox is hidden; its <label> is the visible marker and
+ *    must stay displayed (a display:none label wouldn't increment the counter). */
 input.margin-toggle { display: none; }
 .sidenote-number { counter-increment: sidenote-counter; position: relative; }
 .cascade.sidenotes label.sidenote-number { cursor: pointer; }
 .sidenote-number::after {
   content: counter(sidenote-counter);
   font-size: 0.62em; vertical-align: super;
-  color: var(--ct-link); margin-inline: 0.35em;   /* breathing room so back-to-back markers don't read as one number */
+  color: var(--ct-link); margin-inline: var(--sn-mark-space);
 }
 .cascade.sidenotes .sidenote::before {
   content: counter(sidenote-counter) "\2002";
   font-size: 0.72em; vertical-align: super; color: var(--ct-link);
 }
-/* Unnumbered margin-note marker: the ⊕ label, inline as a small superscript. */
+/* Unnumbered margin-note marker — the ⊕ label, as a small superscript. */
 .cascade.sidenotes label.margin-toggle:not(.sidenote-number) {
   cursor: pointer; font-size: 0.72em; vertical-align: super;
-  color: var(--ct-link); margin-inline: 0.3em;
+  color: var(--ct-link); margin-inline: var(--sn-mark-space);
 }
 
-/* ── note typography (shared) ────────────────────────────────────────────── */
+/* ── Note typography (shared). */
 .cascade.sidenotes .sidenote,
 .cascade.sidenotes .marginnote {
   font-size: max(var(--cs-size-n2), var(--cf-size-min));
@@ -77,13 +65,9 @@ input.margin-toggle { display: none; }
   color: var(--ct-fg-muted);
 }
 
-/* ── DISCLOSURE (shared base) ────────────────────────────────────────────────
- * Notes collapse to their markers; clicking any marker opens them ALL as indented
- * asides, clicking again closes them (pure CSS — one checkbox flips the shared
- * `:has()` state, so back-to-back markers behave as a set instead of toggling one
- * note out of a pair). This is the behavior for `.centered` at every width AND for
- * `.banded` once it's too narrow for a margin band — below that width the two modes
- * are deliberately identical. The wide banded float (further down) overrides it. */
+/* ── Disclosure (shared base). Notes hide; any checked marker opens them ALL via a
+ *    shared :has() state, so back-to-back markers behave as a set. This is `.centered`
+ *    at every width and `.banded` below the band width; the wide float overrides it. */
 .cascade.sidenotes .sidenote,
 .cascade.sidenotes .marginnote { display: none; }
 .cascade.sidenotes:has(.margin-toggle:checked) .sidenote,
@@ -94,12 +78,10 @@ input.margin-toggle { display: none; }
   border-inline-start: 2px solid var(--ct-rule);
 }
 
-/* Note group: a run of back-to-back notes at one reference. `display: contents`
- * makes the wrapper transparent by default (banded float works, and the DOM stays
- * marker→body→marker→body so the counter numbers correctly). When opened it becomes
- * a flex block: `order` clusters the markers on one line and stacks the bodies
- * beneath (flex order is visual only, so numbering is untouched) — no orphaned
- * marker. `gap` spaces the stacked bodies. */
+/* ── Note group. Transparent (`display: contents`) by default, so the float works and
+ *    the DOM stays marker→body→marker→body for correct numbering. When opened it turns
+ *    into a flex block: `order` clusters the markers and stacks the bodies (visual only,
+ *    numbering untouched) — no orphaned marker. */
 .note-group { display: contents; }
 .cascade.sidenotes:has(.margin-toggle:checked) .note-group {
   display: flex; flex-wrap: wrap; align-items: baseline;
@@ -111,10 +93,9 @@ input.margin-toggle { display: none; }
   order: 1; flex-basis: 100%; margin: 0;
 }
 
-/* ── BANDED, wide (≥ 62rem): offset text column + notes floated into the band ──
- * The only override of the disclosure above. Its `:has(:checked)` variants match
- * the opened state too, so a marker tapped at a wide width can't pull a note out of
- * the float (labels toggle their checkbox even when the note is floated). */
+/* ── Banded, wide (≥62rem): offset column + notes floated into the band. The only
+ *    override of the disclosure; the :has(:checked) variants keep a marker tapped at a
+ *    wide width from pulling a note out of the float. */
 @media (min-width: 62rem) {
   .cascade.sidenotes.banded {
     box-sizing: content-box;
@@ -137,6 +118,5 @@ input.margin-toggle { display: none; }
     margin: var(--sn-gap) var(--sn-pull) 0 0;
     padding: 0; border: 0;
   }
-  /* keep the group transparent when opened at a wide width, so notes still float */
   .cascade.sidenotes.banded:has(.margin-toggle:checked) .note-group { display: contents; }
 }
