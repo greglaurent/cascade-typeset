@@ -75,13 +75,13 @@
                                   block-inset: 1em,
                                   block-radius: 4pt,
                                 ),                                                                       render: utils.render-code-block),
-  quote:          (step: 0,    category: "body",    defaults: (style: "italic", fill: t.fg, block-inset: (left: 2em), block-fill: t.quote-bg), render: utils.render-quote),
+  quote:          (step: 0,    category: "body",    defaults: (style: "italic", fill: t.fg, block-inset: (left: 2em), block-fill: t.quote-bg, block-stroke: (left: 2.25pt + t.quote-rule)), render: utils.render-quote),
   figure-caption: (step: -2,   category: "body",    defaults: (style: "italic", fill: t.fg-muted),       render: utils.render-figure-caption),
   list:           (step: 0,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-list),
   enum:           (step: 0,    category: "body",    defaults: (fill: t.fg),                              render: utils.render-enum),
   figure:         (step: none, category: "body",    defaults: (:),                                       render: utils.render-figure),
   divider:        (step: none, category: "body",    defaults: (stroke: 0.5pt + t.rule, length: 100%),    render: utils.render-divider),
-  footnote-entry: (step: -2,   category: "body",    defaults: (fill: t.fg-muted),                        render: utils.render-text),
+  footnote-entry: (step: -2,   category: "body",    defaults: (fill: t.fg-subtle),                       render: utils.render-text),
 )
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@
   // Tufte edition. `sidenotes: false` (the default, "standards" edition) drops both to
   // ordinary numbered footnotes at the foot of the page, so the same document compiles
   // to a submission-safe form with no source changes.
-  let _note-body = it => text(size: (body-bundle.scale.size)(-2), fill: theme.fg-muted, it)
+  let _note-body = it => text(size: (body-bundle.scale.size)(-2), fill: theme.fg-subtle, it)
   if sidenotes {
     result.insert("sidenote", body => _marge-note(numbering: "1", _note-body(body)))
     result.insert("marginnote", body => _marge-note(numbering: none, _note-body(body)))

@@ -13,32 +13,6 @@ const write = (rel, body) => { writeFileSync(join(root, rel), body); console.log
 const GEN = 'GENERATED from tokens.mjs by `just gen` — do not edit by hand';
 const cap = s => s[0].toUpperCase() + s.slice(1);
 
-// HSL lightness flip — mirrors Typst's theme.derive-dark, so the CSS dark palette is
-// precomputed from the same light source (light hex → flip L → dark hex).
-function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
-function rgbToHsl(r, g, b) {
-  r /= 255; g /= 255; b /= 255;
-  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
-  let h = 0, s = 0;
-  if (mx !== mn) {
-    const d = mx - mn;
-    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
-    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    h /= 6;
-  }
-  return [h, s, l];
-}
-function hslToRgb(h, s, l) {
-  if (s === 0) { const v = Math.round(l * 255); return [v, v, v]; }
-  const hue = (p, q, t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
-  return [hue(p, q, h + 1 / 3), hue(p, q, h), hue(p, q, h - 1 / 3)].map(x => Math.round(x * 255));
-}
-const flipHex = hex => {
-  const [h, s, l] = rgbToHsl(...hexToRgb(hex));
-  return '#' + hslToRgb(h, s, 1 - l).map(x => x.toString(16).padStart(2, '0').toUpperCase()).join('');
-};
-
 // Scale step helpers ----------------------------------------------------------
 const steps = [];
 for (let i = scale.steps.min; i <= scale.steps.max; i++) steps.push(i);
@@ -349,36 +323,27 @@ function fontPresetCss(name) {
 
 // ── cascade-typst/theme.typ ───────────────────────────────────────────────────
 function themeTyp() {
-  const paletteLines = Object.entries(theme.light).map(([k, hex]) =>
-    `  ${(k + ':').padEnd(11)}rgb("${hex}"),`).join('\n');
+  const pal = name => Object.entries(theme[name]).map(([k, hex]) =>
+    `  ${(k + ':').padEnd(16)}rgb("${hex}"),`).join('\n');
   return `// cascade-typst — theme.typ  (${GEN})
-// Semantic color tokens. presets.light is curated; presets.dark flips HSL lightness
-// (derive-dark). Derived tokens (link, code-bg, code-fg, quote-rule, quote-bg) fall
-// back to accent / bg-subtle / fg / fg-muted / none in make().
-
-#let _flip-lightness(c) = {
-  let parts = color.hsl(c).components()
-  color.hsl(parts.at(0), parts.at(1), 100% - parts.at(2))
-}
-
-#let derive-dark(palette) = {
-  let r = (:)
-  for (k, v) in palette {
-    r.insert(k, if type(v) == color { _flip-lightness(v) } else { v })
-  }
-  r
-}
+// Semantic color tokens. presets.light and presets.dark are both curated (explicit
+// hex). The derived tokens (link, code-bg, code-fg, quote-rule, quote-bg) fall back to
+// accent / bg-subtle / fg / fg-muted / none in make().
 
 #let _or-fallback(v, fb) = if v == auto { fb } else { v }
 
 #let make(
-  fg:         none,
-  fg-muted:   none,
-  fg-subtle:  none,
-  bg:         none,
-  bg-subtle:  none,
-  accent:     none,
-  rule:       none,
+  fg:            none,
+  fg-muted:      none,
+  fg-subtle:     none,
+  bg:            none,
+  bg-subtle:     none,
+  rule:          none,
+  accent:         none,
+  accent-hover:   none,
+  accent-subtle:  none,
+  accent-rule:    none,
+  accent-visited: none,
   link:       auto,
   code-bg:    auto,
   code-fg:    auto,
@@ -390,65 +355,73 @@ function themeTyp() {
   fg-subtle: fg-subtle,
   bg: bg,
   bg-subtle: bg-subtle,
-  accent: accent,
   rule: rule,
+  accent: accent,
+  accent-hover: accent-hover,
+  accent-subtle: accent-subtle,
+  accent-rule: accent-rule,
+  accent-visited: accent-visited,
   link:       _or-fallback(link, accent),
   code-bg:    _or-fallback(code-bg, bg-subtle),
   code-fg:    _or-fallback(code-fg, fg),
-  quote-rule: _or-fallback(quote-rule, fg-muted),
+  quote-rule: _or-fallback(quote-rule, accent-rule),
   quote-bg:   _or-fallback(quote-bg, none),
 )
 
 #let _light-palette = (
-${paletteLines}
+${pal('light')}
+)
+
+#let _dark-palette = (
+${pal('dark')}
 )
 
 #let presets = (
   light: make(.._light-palette),
-  dark:  make(..derive-dark(_light-palette)),
+  dark:  make(.._dark-palette),
 )
 `;
 }
 
 // ── cascade-css/theme.css ─────────────────────────────────────────────────────
 function themeCss() {
-  const dark = Object.fromEntries(Object.entries(theme.light).map(([k, hex]) => [k, flipHex(hex)]));
-  const blk = (pal, ind) => Object.entries(pal).map(([k, hex]) =>
-    `${ind}${('--ct-' + k + ':').padEnd(15)} ${hex};`).join('\n');
+  const blk = (name, ind) => Object.entries(theme[name]).map(([k, hex]) =>
+    `${ind}${('--ct-' + k + ':').padEnd(21)} ${hex};`).join('\n');
   return `/* cascade-css — theme.css  (${GEN})
- * Semantic color tokens. Light is the source; dark is cascade's derive-dark (HSL
- * lightness flipped), precomputed to hex here. Dark applies on the system pref or
- * [data-theme="dark"]; [data-theme="light"] forces light. Derived tokens live on
- * .cascade so they recompute from whatever base is active for that container.
+ * Semantic color tokens. Light and dark are both curated (explicit hex). Dark applies
+ * on the system pref or [data-theme="dark"]; [data-theme="light"] forces light. The
+ * derived tokens live on .cascade so they recompute from whatever base is active.
  */
 
 /* ── base tokens: light (default) ── */
 :root {
-${blk(theme.light, '  ')}
+${blk('light', '  ')}
 }
 
 /* ── base tokens: dark (system preference) ── */
 @media (prefers-color-scheme: dark) {
   :root {
-${blk(dark, '    ')}
+${blk('dark', '    ')}
   }
 }
 
 /* ── explicit overrides on any element (win over system pref) ── */
 [data-theme="light"] {
-${blk(theme.light, '  ')}
+${blk('light', '  ')}
 }
 [data-theme="dark"] {
-${blk(dark, '  ')}
+${blk('dark', '  ')}
 }
 
 /* ── derived tokens: resolve from whatever base is active on this container ── */
 .cascade {
-  --ct-link:       var(--ct-accent);
-  --ct-code-fg:    var(--ct-fg);
-  --ct-code-bg:    var(--ct-bg-subtle);
-  --ct-quote-rule: var(--ct-fg-muted);
-  --ct-quote-bg:   transparent;
+  --ct-link:         var(--ct-accent);
+  --ct-link-hover:   var(--ct-accent-hover);
+  --ct-link-visited: var(--ct-accent-visited);
+  --ct-code-fg:      var(--ct-fg);
+  --ct-code-bg:      var(--ct-bg-subtle);
+  --ct-quote-rule:   var(--ct-accent-rule);
+  --ct-quote-bg:     transparent;
 }
 `;
 }

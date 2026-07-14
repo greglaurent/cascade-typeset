@@ -75,7 +75,12 @@
   text-underline-offset: 0.12em;
   text-decoration-color: color-mix(in srgb, var(--ct-link) 60%, transparent);
 }
-.cascade a:hover { text-decoration-color: var(--ct-link); }
+/* :visited (before :hover per LVHA). Privacy limits it to recoloring — the text color
+   changes reliably; the underline follows where the browser allows it on :visited. */
+.cascade a:visited { color: var(--ct-link-visited); text-decoration-color: color-mix(in srgb, var(--ct-link-visited) 60%, transparent); }
+.cascade a:hover { color: var(--ct-link-hover); text-decoration-color: var(--ct-link-hover); }
+/* Focus ring on --ct-accent (not accent-rule): needs 3:1 vs the page per WCAG 2.2. */
+.cascade a:focus-visible { outline: 2px solid var(--ct-accent); outline-offset: 2px; border-radius: 1px; }
 
 /* ── Code (code category = mono, sans-text optical) ── */
 .cascade code, .cascade kbd, .cascade samp, .cascade pre {
@@ -108,7 +113,7 @@
   color: var(--ct-fg);
   margin: var(--cr-baseline) 0;
   padding: var(--cr-space-p1) 2em;
-  border-inline-start: 2pt solid var(--ct-quote-rule);
+  border-inline-start: 3px solid var(--ct-quote-rule);   /* accent-rule: rubrication, not structure */
   background: var(--ct-quote-bg);
 }
 .cascade blockquote > *:last-child { margin-bottom: 0; }
@@ -142,11 +147,12 @@
 .cascade .footnotes, .cascade [role="doc-endnotes"] {
   font-size: max(var(--cs-size-n2), var(--cf-size-min));
   line-height: var(--cf-lead-n2);
-  color: var(--ct-fg-muted);
+  color: var(--ct-fg-subtle);
   margin-top: var(--cr-space-p4);
   border-top: 0.5pt solid var(--ct-rule);
   padding-top: var(--cr-space-p1);
 }
 
-/* Selection uses the accent, softly. */
-.cascade ::selection { background: color-mix(in srgb, var(--ct-accent) 22%, transparent); }
+/* Selection: a solid subtle-accent wash. A translucent mix would composite
+   differently over the page vs code-block backgrounds; a solid token won't. */
+.cascade ::selection { background: var(--ct-accent-subtle); color: var(--ct-fg); }

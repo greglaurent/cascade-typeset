@@ -38,7 +38,7 @@
  * @typedef {{ stacks: Record<string, Stack>, default: string,
  *             bundles: Record<string, Bundle>, presets: Record<string, FontPreset> }} Fonts
  *
- * @typedef {{ light: Record<string, string> }} Theme
+ * @typedef {{ light: Record<string, string>, dark: Record<string, string> }} Theme
  * @typedef {{ unit: { print: string, web: number },
  *             multipliers: Record<string, number> }} Rhythm
  */
@@ -133,18 +133,35 @@ export const fonts = {
 
 /** @type {Theme} */
 export const theme = {
-  // Light palette — the source of truth (7 base tokens). Dark is DERIVED by flipping
-  // each color's HSL lightness: Typst does it at runtime (derive-dark); the generator
-  // precomputes the hexes for CSS from this same palette. The semantic derived tokens
-  // (link, code-bg, code-fg, quote-rule, quote-bg) are formula, kept in the templates.
+  // Curated light + dark palettes (10 base tokens each). Both are explicit hex — dark
+  // is hand-tuned (warm-neutral, not a mechanical HSL flip of light). The semantic
+  // derived tokens (link, link-hover, code-*, quote-*) are formula, kept in the
+  // generator templates. Add or edit a color here, then `just gen`.
   light: {
-    'fg':        '#1A1A1A',   // 16.6:1 on bg, AAA
-    'fg-muted':  '#525250',   //  7.5:1, AAA
-    'fg-subtle': '#6C6C69',   //  5.0:1, AA
-    'bg':        '#F8F7F2',
-    'bg-subtle': '#F0EEE7',
-    'accent':    '#1F3A5F',   // 11.0:1, AAA
-    'rule':      '#8E8E8A',
+    'fg':            '#171717',
+    'fg-muted':      '#59544C',
+    'fg-subtle':     '#7A746A',
+    'bg':            '#F6F2E9',
+    'bg-subtle':     '#EFE9DC',
+    'rule':          '#C4BDB0',
+    'accent':         '#7A2E28',   // oxblood
+    'accent-hover':   '#5E211C',
+    'accent-subtle':  '#F0E2DE',
+    'accent-rule':    '#C9A5A0',
+    'accent-visited': '#5A3A52',   // muted plum — visited convention, warmed (CSS only)
+  },
+  dark: {
+    'fg':            '#E8E4DC',
+    'fg-muted':      '#A8A196',
+    'fg-subtle':     '#8A8378',
+    'bg':            '#14120E',
+    'bg-subtle':     '#1E1B16',
+    'rule':          '#3A362F',
+    'accent':         '#E09A93',   // lifted for contrast on the dark ground
+    'accent-hover':   '#EFB8B1',
+    'accent-subtle':  '#2E1614',
+    'accent-rule':    '#4A2A26',
+    'accent-visited': '#C9A5C4',   // muted mauve
   },
 };
 

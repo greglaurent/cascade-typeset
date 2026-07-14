@@ -62,7 +62,7 @@ input.margin-toggle { display: none; }
 .cascade.sidenotes .marginnote {
   font-size: max(var(--cs-size-n2), var(--cf-size-min));
   line-height: var(--cf-lead-n2);
-  color: var(--ct-fg-muted);
+  color: var(--ct-fg-subtle);
 }
 
 /* ── Disclosure (shared base). Notes hide; any checked marker opens them ALL via a
