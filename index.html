@@ -4,15 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cascade Typeset</title>
+<!-- The document's color tokens (--ct-*), single-sourced from tools/tokens.mjs via
+     `just gen`. The chrome reuses --ct-bg (iframe ground) and --ct-accent (focus ring)
+     straight from here — no copies — and they flip on the same [data-theme] the
+     --ui-* chrome palette uses. -->
+<link rel="stylesheet" href="cascade-css/theme.css">
 <style>
-  :root { color-scheme: light dark; }
+  /* color-scheme stays declared so native controls + scrollbars render for both
+     themes — but the chrome palette is driven by [data-theme] on <html>, not by it. */
+  :root {
+    color-scheme: light dark;
+    /* Chrome palette — warm-neutral, so the frame recedes behind the warm document
+       instead of framing it in cold white. Viewer-only (not part of the cascade
+       library). Light values (also the default); [data-theme="dark"] overrides below.
+       The document's --ct-bg / --ct-accent come from the linked theme.css above. */
+    --ui-bg: #EDEAE3; --ui-fg: #2A2723; --ui-bg-panel: #F6F2E9;
+    --ui-border: #C9C3B8; --ui-border-strong: #9A9388; --ui-shadow: #2A272340;
+  }
+  [data-theme="dark"] {
+    --ui-bg: #100E0B; --ui-fg: #DDD8CF; --ui-bg-panel: #1A1713;
+    --ui-border: #3D3830; --ui-border-strong: #565046; --ui-shadow: #00000080;
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
-  body { display: flex; flex-direction: column; font: 14px/1.4 system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; font: 14px/1.4 system-ui, sans-serif; background: var(--ui-bg); color: var(--ui-fg); }
   header {
     flex: none; display: flex; align-items: center; gap: 0.6rem;
-    padding: 0.6rem 1rem; border-bottom: 1px solid #8883;
-    background: Canvas; color: CanvasText;
+    padding: 0.6rem 1rem; border-bottom: 1px solid var(--ui-border);
+    background: var(--ui-bg); color: var(--ui-fg);
   }
   .name { font-weight: 600; letter-spacing: -0.01em; margin-right: auto; }
   .name small { font-weight: 400; opacity: 0.55; }
@@ -22,16 +41,16 @@
   .menu[hidden] { display: none; }
   .menu > summary {
     list-style: none; cursor: pointer; user-select: none;
-    padding: 0.35rem 0.9rem; border: 1px solid #8886; border-radius: 6px;
+    padding: 0.35rem 0.9rem; border: 1px solid var(--ui-border-strong); border-radius: 6px;
   }
   .menu > summary::-webkit-details-marker { display: none; }
   .menu > summary::after { content: " ▾"; opacity: 0.6; }
-  .menu[open] > summary { background: CanvasText; color: Canvas; border-color: CanvasText; }
+  .menu[open] > summary { background: var(--ui-fg); color: var(--ui-bg-panel); border-color: var(--ui-fg); }
   .menu .panel {
     position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 10;
     display: grid; gap: 0.45rem; padding: 0.7rem; min-width: 15rem;
-    background: Canvas; color: CanvasText;
-    border: 1px solid #8886; border-radius: 8px; box-shadow: 0 8px 24px #0005;
+    background: var(--ui-bg-panel); color: var(--ui-fg);
+    border: 1px solid var(--ui-border-strong); border-radius: 8px; box-shadow: 0 8px 24px var(--ui-shadow);
   }
   .panel label { display: grid; grid-template-columns: 4rem 1fr; align-items: center; gap: 0.5rem; }
   .panel select { font: inherit; }
@@ -40,30 +59,37 @@
   .tab {
     appearance: none; cursor: pointer; font: inherit;
     padding: 0.35rem 0.9rem; border-radius: 6px;
-    border: 1px solid #8886; background: transparent; color: inherit;
+    border: 1px solid var(--ui-border-strong); background: transparent; color: inherit;
   }
-  .tab[aria-selected="true"] { background: CanvasText; color: Canvas; border-color: CanvasText; }
+  .tab[aria-selected="true"] { background: var(--ui-fg); color: var(--ui-bg-panel); border-color: var(--ui-fg); }
 
   /* Compile button — replaces the Options menu on the Typst tab */
   .compile {
     appearance: none; cursor: pointer; font: inherit;
     padding: 0.35rem 0.9rem; border-radius: 6px;
-    border: 1px solid #8886; background: transparent; color: inherit;
+    border: 1px solid var(--ui-border-strong); background: transparent; color: inherit;
   }
   .compile[hidden] { display: none; }
-  .compile:not(:disabled):hover { border-color: CanvasText; }
+  .compile:not(:disabled):hover { border-color: var(--ui-fg); }
   .compile:disabled { opacity: 0.45; cursor: default; }
 
   /* Sun/moon light–dark toggle (far right) */
   .theme-toggle {
     appearance: none; cursor: pointer; display: grid; place-items: center;
     inline-size: 2rem; block-size: 2rem; padding: 0; margin-left: 0.1rem;
-    border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit;
+    border: 1px solid var(--ui-border-strong); border-radius: 6px; background: transparent; color: inherit;
   }
-  .theme-toggle:hover { border-color: CanvasText; }
+  .theme-toggle:hover { border-color: var(--ui-fg); }
   .theme-toggle svg { inline-size: 1.15rem; block-size: 1.15rem; display: block; }
 
-  iframe { flex: 1; width: 100%; border: 0; background: Canvas; }
+  /* Focus ring — the one intentional break from neutrality: the brand accent, so
+     focus is unmistakable and never reads as hover or selection. */
+  .menu > summary:focus-visible,
+  .tab:focus-visible,
+  .compile:focus-visible,
+  .theme-toggle:focus-visible { outline: 2px solid var(--ct-accent); outline-offset: 2px; }
+
+  iframe { flex: 1; width: 100%; border: 0; background: var(--ct-bg); }
 </style>
 </head>
 <body>
@@ -147,9 +173,12 @@
 
   const closeMenu = () => { opts.open = false; };
 
-  // Theme drives the viewer chrome too: setting color-scheme flips the
-  // Canvas/CanvasText system colors the banner/buttons/menu are built on.
-  const applyChrome = () => { document.documentElement.style.colorScheme = theme; };
+  // Theme drives the chrome via [data-theme] (the --ui-* palette flips from one switch).
+  // color-scheme is also set so native controls + scrollbars match the active theme.
+  const applyChrome = () => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  };
 
   // ── Compile (Typst tab): rebuild the PDF from the currently selected options ──
   const compileBtn = document.getElementById('compile');
