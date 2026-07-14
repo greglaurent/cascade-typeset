@@ -33,8 +33,14 @@ flagged in your editor (and by `just typecheck`) before it ever reaches the gene
 | `tools/verify.mjs` | fidelity checks (`just verify`) |
 | `cascade-typst/`   | Typst library: `theme` · `scale` · `font` · `rhythm` · `layout` (+ `utils`), entrypoint `lib.typ` |
 | `cascade-css/`     | CSS port: `theme.css` · `scale.css` · `font.css` · `rhythm.css` · `layout.css`, `fonts/` presets, `sample.html` |
-| `index.html` · `serve.ts` | the dev viewer (CSS ⇄ Typst) served by `just serve` |
+| `site/`            | a **separate website** that previews the library — viewer chrome + brand (`index.html`, `serve.ts`, `DESIGN.md`, `assets/`) |
 | `deno.jsonc`       | Deno config (relaxed `checkJs` for the tools) |
+
+**cascade — the typesetting system — is `tools/` + `cascade-typst/` + `cascade-css/`.**
+`site/` is *not* part of it: it's a website that previews cascade (loads its CSS, iframes
+its specimens) and never the other way round. The site's own design — chrome and brand —
+lives in [`site/DESIGN.md`](site/DESIGN.md); it borrows only the document's `--ct-bg` /
+`--ct-accent` for its iframe ground and focus ring.
 
 ## Dev
 

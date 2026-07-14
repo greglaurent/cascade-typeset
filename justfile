@@ -34,7 +34,7 @@ verify:
 
 # Type-check the toolchain (deno check — Node types built-in, no @types/node needed).
 typecheck:
-    deno check tools/tokens.mjs tools/gen.mjs tools/verify.mjs serve.ts
+    deno check tools/tokens.mjs tools/gen.mjs tools/verify.mjs site/serve.ts
 
 # Compile the Typst example to a PDF (viewable via `just serve` → Typst tab).
 pdf:
@@ -43,4 +43,4 @@ pdf:
 
 # Serve both examples (CSS/Typst viewer) at localhost:8175 — run `just pdf` first.
 serve:
-    deno run --allow-net --allow-read --allow-write --allow-run --allow-env serve.ts
+    deno run --allow-net --allow-read --allow-write --allow-run --allow-env site/serve.ts

@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cascade Typeset</title>
+<!-- Favicon: the neutral mark (no accent, per brand rule 1). Follows the OS scheme —
+     it lives in the browser tab chrome, not the page, so it tracks the system, not the
+     in-page theme toggle. -->
+<link rel="icon" href="site/assets/favicon/cascade-favicon-light.svg" media="(prefers-color-scheme: light)">
+<link rel="icon" href="site/assets/favicon/cascade-favicon-dark.svg" media="(prefers-color-scheme: dark)">
 <!-- The document's color tokens (--ct-*), single-sourced from tools/tokens.mjs via
      `just gen`. The chrome reuses --ct-bg (iframe ground) and --ct-accent (focus ring)
      straight from here — no copies — and they flip on the same [data-theme] the

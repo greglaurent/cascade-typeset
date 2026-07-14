@@ -1,9 +1,10 @@
-// cascade-typeset — dev server (Deno). Serves both example projects and the viewer,
-// and exposes POST /compile to rebuild the Typst PDF from the viewer's options.
-//   deno run --allow-net --allow-read --allow-write --allow-run --allow-env serve.ts
+// The site's dev server (Deno). Serves the viewer (site/index.html at "/") plus the
+// cascade library files it consumes, and exposes POST /compile to rebuild the Typst
+// PDF. The site is separate from the typesetting library — it just previews it.
+//   deno run --allow-net --allow-read --allow-write --allow-run --allow-env site/serve.ts
 import { join, normalize, extname } from "node:path";
 
-const root = new URL(".", import.meta.url).pathname.replace(/\/$/, ""); // repo root
+const root = new URL("..", import.meta.url).pathname.replace(/\/$/, ""); // repo root (serve.ts lives in site/)
 const port = 8175;
 
 const types: Record<string, string> = {
@@ -42,7 +43,7 @@ Deno.serve({ port, onListen: () => console.log(`cascade-typeset → http://local
   if (req.method === "POST" && url.pathname === "/compile") return compile(req);
 
   let p = decodeURIComponent(url.pathname);
-  if (p === "/") p = "/index.html";
+  if (p === "/") p = "/site/index.html";
   const file = join(root, normalize("/" + p));         // normalize; block ../ escape
   if (!file.startsWith(root)) return new Response("forbidden", { status: 403 });
   try {

@@ -67,18 +67,17 @@
 .cascade em, .cascade i, .cascade cite { font-style: italic; }
 .cascade small { font-size: var(--cs-size-n1); }
 
-/* link component: underlined, accent color (only links are underlined). */
+/* Link discipline: oxblood sits inside the warm family, so it won't pop by colour
+   alone — the underline does the work. Full-colour, 1px, thickening to 2px on hover. */
 .cascade a {
   color: var(--ct-link);
   text-decoration: underline;
-  text-decoration-thickness: 0.5pt;
-  text-underline-offset: 0.12em;
-  text-decoration-color: color-mix(in srgb, var(--ct-link) 60%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
 }
-/* :visited (before :hover per LVHA). Privacy limits it to recoloring — the text color
-   changes reliably; the underline follows where the browser allows it on :visited. */
-.cascade a:visited { color: var(--ct-link-visited); text-decoration-color: color-mix(in srgb, var(--ct-link-visited) 60%, transparent); }
-.cascade a:hover { color: var(--ct-link-hover); text-decoration-color: var(--ct-link-hover); }
+/* :visited (before :hover per LVHA). Privacy limits :visited to recolouring the text. */
+.cascade a:visited { color: var(--ct-link-visited); }
+.cascade a:hover { color: var(--ct-link-hover); text-decoration-thickness: 2px; }
 /* Focus ring on --ct-accent (not accent-rule): needs 3:1 vs the page per WCAG 2.2. */
 .cascade a:focus-visible { outline: 2px solid var(--ct-accent); outline-offset: 2px; border-radius: 1px; }
 

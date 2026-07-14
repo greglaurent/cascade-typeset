@@ -47,9 +47,11 @@ input.margin-toggle { display: none; }
   font-size: 0.62em; vertical-align: super;
   color: var(--ct-link); margin-inline: var(--sn-mark-space);
 }
+/* Note-body prefix: full-size on the baseline (matches the note text it precedes),
+   not a superscript — only the in-text reference marker stays raised. */
 .cascade.sidenotes .sidenote::before {
   content: counter(sidenote-counter) "\2002";
-  font-size: 0.72em; vertical-align: super; color: var(--ct-link);
+  color: var(--ct-link);
 }
 /* Unnumbered margin-note marker — the ⊕ label, as a small superscript. */
 .cascade.sidenotes label.margin-toggle:not(.sidenote-number) {
