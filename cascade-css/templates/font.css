@@ -1,0 +1,47 @@
+/* cascade-css — font.css (generated from the spec) */
+.cascade {
+  /* families — defaults: serif = Lora, sans = Inter, mono = DejaVu Sans Mono */
+  --cf-font-serif: {{ serif_family }};
+  --cf-font-sans: {{ sans_family }};
+  --cf-font-mono: {{ mono_family }};
+
+  --cf-family-body:    var(--cf-font-serif);
+  --cf-family-heading: var(--cf-family-body);
+  --cf-family-code:    var(--cf-font-mono);
+
+  /* body optical params — default body = serif = Lora */
+  --cf-xh: {{ xh }};
+  --cf-kt: {{ kt }};
+  --cf-lb: {{ lb }};
+  --cf-bws: {{ bws }};
+  --cf-kws: {{ kws }};
+  --cf-tc: {{ tc }};
+  --cf-lmin: {{ lmin }};
+  --cf-lmax: {{ lmax }};
+  --cf-measure: {{ measure }};
+  --cf-size-min: {{ size_min }};
+  --cf-lead0: {{ lead0 }};
+
+  /* heading optical params (= body) */
+  --cf-h-xh: var(--cf-xh);
+  --cf-h-kt: var(--cf-kt);
+  --cf-h-lb: var(--cf-lb);
+  --cf-h-lead0: {{ h_lead0 }};
+
+  /* body tracking per step (em) — optical::tracking, projected */
+{% for r in tracks %}  --cf-track-{{ r.label }}: {{ r.value }};
+{% endfor %}
+  /* body line-height per step (unitless, clamped) — optical::leading, projected */
+{% for r in leads %}  --cf-lead-{{ r.label }}: {{ r.value }};
+{% endfor %}
+  /* heading tracking + line-height (p1..p4 = h4..h1) */
+{% for r in h_tracks %}  --cf-h-track-{{ r.label }}: {{ r.value }};
+{% endfor %}{% for r in h_leads %}  --cf-h-lead-{{ r.label }}: {{ r.value }};
+{% endfor %}
+  /* word-space (body, step 0) */
+  --cf-ws-0: calc(var(--cf-bws) * 1em);
+}
+
+/* per-category default optical baselines (generic serif/sans/mono) — class on the .cascade box */
+{% for p in profiles %}.cascade.profile-{{ p.id }} { --cf-xh: {{ p.xh }}; --cf-kt: {{ p.kt }}; --cf-lb: {{ p.lb }}; --cf-bws: {{ p.bws }}; }
+{% endfor %}

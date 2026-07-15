@@ -1,0 +1,7 @@
+// cascade — font measure: Inter (sans). OS/2 metrics + optical profile.
+(
+    name: "Inter",
+    category: sans,
+    profile:  (optical_size: "12pt", k_tracking: 0.03, leading_base: 1.45, word_space: 0.26),
+    measured: (x_height: 0.546, cap_height: 0.728, units_per_em: 2048, sx: "sxHeight 1118", asc: "0.969", desc: "-0.241"),
+)

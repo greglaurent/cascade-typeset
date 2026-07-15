@@ -1,0 +1,15 @@
+/* cascade-css — rhythm.css  ({{ banner }})
+ * Vertical rhythm: spacing scale derived from the fluid base (unit = base · factor),
+ * so all spacing scales with the type. Multipliers match cascade/rhythm.typ; baseline
+ * = one body line.
+ */
+
+.cascade {
+  --cr-unit: calc(var(--cs-base) * {{ unit_web }});
+
+{% for s in spaces %}  {{ s.padded_name }} calc(var(--cr-unit) * {{ s.value }});
+{% endfor %}
+  /* One body line — paragraph separation (matches the layout.typ rhythm fix). */
+  --cr-baseline: calc(var(--cs-base) * var(--cf-lead-0));
+}
+

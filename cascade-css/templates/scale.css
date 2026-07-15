@@ -1,0 +1,15 @@
+/* cascade-css — scale.css (generated from the spec) */
+.cascade {
+  --cs-base: {{ base }};
+
+  /* default preset: {{ default_id }} */
+  --cs-ratio: {{ default_ratio }};
+  --cs-n: {{ default_n }};
+  --cs-ln-ratio: log(var(--cs-ratio));
+
+{% for s in sizes %}  --cs-size-{{ s.label }}: {{ s.expr }};
+{% endfor %}}
+
+/* presets — add as a class on .cascade */
+{% for p in presets %}.cascade.scale-{{ p.id }} { --cs-ratio: {{ p.ratio }}; --cs-n: {{ p.n }}; }
+{% endfor %}

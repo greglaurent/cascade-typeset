@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cascade-css — sample</title>
+  <link rel="stylesheet" href="../cascade-css/cascade.css">
+  <link rel="stylesheet" href="../cascade-css/fonts/lora.css">
+  <link rel="stylesheet" href="../cascade-css/fonts/inter.css">
+  <link rel="stylesheet" href="../cascade-css/fonts/jost.css">
+  <link rel="stylesheet" href="../cascade-css/sidenotes.css">
+  <style>
+    html, body { margin: 0; background: var(--ct-bg); }
+  </style>
+</head>
+<body>
+  <article class="cascade sidenotes banded scale-golden-ditonic bundle-serif" id="doc">
+    <h1>The Well-Set Page</h1>
+    <p class="text-1">A specimen exercising every cascade component — the modular scale,
+      optical profile, vertical rhythm, and theme — written about the craft it demonstrates.</p>
+
+    <p>Typography begins with one decision: the size of the body text. Everything else — the
+      headings above it, the captions beneath, the space between the lines — follows from that
+      size by <em>proportion</em> rather than by whim. A <strong>modular scale</strong> fixes
+      those ratios, so a page holds together the way intervals hold a chord.</p>
+
+    <p>Body text asks to be read, not admired. It wants a comfortable measure — around
+      sixty-six characters to the line — and leading loose enough to carry the eye back to the
+      left margin without losing the row. The relevant knob is <code>line-height</code>; set it
+      too tight and the lines congeal, too loose and they drift. The reasoning behind these
+      defaults lives in <a href="https://example.com" target="_blank" rel="noopener">the notes</a>.</p>
+
+    <p>The finer adjustments compound quietly.<label for="sn1" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn1" class="margin-toggle"><span class="sidenote">Bringhurst calls these the micro-typographic controls — the ones a reader feels but never consciously notices.</span> Tracking opens at display sizes and closes at
+      reading sizes; word spacing does the opposite. None of it should announce itself — the
+      reader simply finds the page easy to move through.<span class="note-group"><label for="sn2" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn2" class="margin-toggle"><span class="sidenote">On the sixty-six-character line and much else, see Robert Bringhurst, <em>The Elements of Typographic Style</em>.</span><label for="sn3" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn3" class="margin-toggle"><span class="sidenote">And, on vertical rhythm specifically, the same volume's chapter on the baseline.</span></span></p>
+
+    <h2>On measure and rhythm</h2>
+    <p>A column of text is a grid in disguise. Every line rests on an invisible baseline, and
+      the space between paragraphs is a whole multiple of it, so the vertical rhythm never
+      stumbles.<label for="mn1" class="margin-toggle">&#8853;</label><input type="checkbox" id="mn1" class="margin-toggle"><span class="marginnote">Bringhurst's comfortable measure runs 45–75 characters; cascade defaults to sixty-six.</span> Even inline code such as <code>font-size</code> is pulled onto the same measure.</p>
+
+    <blockquote>
+      <p>Typography exists to honour content.</p>
+      <p style="text-align:right;font-style:normal;">— Robert Bringhurst</p>
+    </blockquote>
+
+    <h3>A scale, from small to large</h3>
+    <p class="text-1">text-1 · caption and footnote size</p>
+    <p class="text-2">text-2 · small print</p>
+    <p class="text-3">text-3 · the reading size</p>
+    <p class="text-4">text-4 · a subhead or lead</p>
+    <p class="text-5">text-5 · a small display line</p>
+
+    <h4>Principles</h4>
+    <p>A few rules carry most of the weight:</p>
+    <ul>
+      <li>Contrast builds hierarchy — size, weight, and space, used sparingly.</li>
+      <li>Restraint keeps that hierarchy legible; a page that shouts says nothing.</li>
+      <li>Consistency is the quiet virtue: the same choice, made the same way, throughout.</li>
+    </ul>
+    <p>Put plainly, the process is short:</p>
+    <ol>
+      <li>Set the body size and the measure.</li>
+      <li>Derive every other size from the scale.</li>
+      <li>Let the rhythm follow from the leading.</li>
+    </ol>
+
+    <pre><code>#import "@local/cascade:0.1.0": layout
+#let l = layout.make(scale: "golden-ditonic", measure: 66)
+#show: l.page
+#show: l.markup</code></pre>
+
+    <figure>
+      <div style="background:var(--ct-bg-subtle);height:3.5rem;border-radius:4pt;"></div>
+      <figcaption>Figure 1. A figure with its caption set in the caption style.</figcaption>
+    </figure>
+
+    <hr>
+  </article>
+
+  <script>
+    // A host page may drive this specimen by calling setCascade() — exposed globally
+    // for a same-origin embedder. Opened on its own, it just renders the default below.
+    window.setCascade = ({ scale, body, heading, theme, notes }) => {
+      document.getElementById('doc').className =
+        `cascade sidenotes ${notes || 'banded'} ${scale} ${body} ${heading}`.trim();
+      if (theme) document.documentElement.dataset.theme = theme;
+    };
+
+    // Standalone default (when opened directly).
+    window.setCascade({
+      scale: 'scale-golden-ditonic', body: 'bundle-serif', heading: '', notes: 'banded',
+      theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+    });
+  </script>
+</body>
+</html>

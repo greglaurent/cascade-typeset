@@ -1,0 +1,9 @@
+/* cascade-css — fonts.css (generated from the spec) */
+{% for f in fonts %}.cascade.bundle-{{ f.slug }} {
+  --cf-family-body: {{ f.family }};
+  --cf-xh:  {{ f.x_height }};
+  --cf-kt:  {{ f.k_tracking }};
+  --cf-lb:  {{ f.leading_base }};
+  --cf-bws: {{ f.word_space }};
+}
+{% endfor %}

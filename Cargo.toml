@@ -1,0 +1,10 @@
+# cascade-typeset — workspace. Dependencies point inward to the protocol (`cascade`).
+#   cascade       — the protocol: defines the Renderer trait + the spec + validation.
+#   cascade-css   — a Renderer implementation (CSS); owns its templates.  [not yet built]
+#   cascade-typst — a Renderer implementation (Typst); owns its templates. [not yet built]
+#   cascade-cli   — the composition root: reads the consumer's cascade.ron, runs the
+#                   renderers, writes output. Replaces the justfile.        [not yet built]
+# The website and examples are isolated consumers and live OUTSIDE this tree.
+[workspace]
+resolver = "2"
+members = ["cascade", "cascade-css"]

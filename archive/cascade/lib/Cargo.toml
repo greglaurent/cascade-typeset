@@ -1,0 +1,12 @@
+[package]
+name = "cascade-lib"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+askama = "0.16.0"
+ron = "0.12.2"
+serde = { version = "1.0.228", features = ["derive"] }
+
+[dev-dependencies]
+lightningcss = "1.0.0-alpha.71"

@@ -1,0 +1,7 @@
+[package]
+name = "cascade-web"
+version = "0.1.0"
+edition = "2024"
+
+# Server dependency (tiny-http vs axum) is chosen in M5, when site/serve.ts is ported.
+[dependencies]

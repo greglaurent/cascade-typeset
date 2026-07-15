@@ -1,0 +1,10 @@
+/* cascade-css — theme.css (generated from the spec) */
+:root {
+{% for c in colors %}  --ct-{{ c.id }}: {{ c.light }};
+{% endfor %}}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+{% for c in colors %}    --ct-{{ c.id }}: {{ c.dark }};
+{% endfor %}  }
+}

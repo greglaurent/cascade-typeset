@@ -1,0 +1,58 @@
+// cascade — THE SPEC. The single source of typographic definition.
+//
+// This file COMPILES INTO TYPES at build time (see build.rs): every closed set below
+// becomes a Rust type, so every consumer (renderers, cli) is handed values that are
+// valid BY CONSTRUCTION. Edit here → the types recompile → if it compiles, it's correct.
+//
+// Only renderer-AGNOSTIC definitions live here. A target-specific representation — a
+// font's CSS fallback stack, its Typst family, the fluid-vs-fixed base size — is renderer
+// BEHAVIOR, implemented against the Renderer contract, NOT stored here. (Scalars that only
+// exist as print/web reps are intentionally deferred to that boundary.)
+(
+    scale_default: "golden-ditonic",
+    scale_steps: (min: -5, max: 5),
+    scale_presets: [
+        (name: "classical",      ratio: 2.0,                n: 5),
+        (name: "golden-ratio",   ratio: 1.6180339887498949, n: 1),
+        (name: "golden-ditonic", ratio: 1.6180339887498949, n: 2),
+        (name: "tritonic",       ratio: 2.0,                n: 3),
+        (name: "tetratonic",     ratio: 2.0,                n: 4),
+        (name: "major-third",    ratio: 1.25,               n: 1),
+        (name: "minor-third",    ratio: 1.2,                n: 1),
+    ],
+    optical: (
+        word_space_k: 0.04,
+        tracking_clamp: 0.04,
+        leading_clamp: (min: 1.2, max: 1.5), // max 1.5 = WCAG 1.4.12 body line-height / top of the ideal band
+        measure: 65,
+    ),
+    // Per-CATEGORY default optical tuning — the baseline for the GENERIC case, when no
+    // specific font is selected (generic serif / sans / mono). A selected font OVERRIDES
+    // this with its own measured metrics + knobs. x_height lives HERE because there's no
+    // font to measure; it must NOT appear on a font (there it only restates measured.x_height).
+    category_defaults: [
+        (category: serif, optical_size: "11pt", x_height: 0.49, k_tracking: 0.022, leading_base: 1.35, word_space: 0.28),
+        (category: sans,  optical_size: "12pt", x_height: 0.53, k_tracking: 0.03,  leading_base: 1.45, word_space: 0.28),
+        // leading_base 1.5: WCAG 1.4.12 body minimum; mono benefits from looser leading (the global
+        // optical.leading_clamp max is now 1.5, so code reaches ~1.47 effective rather than capping at 1.45).
+        (category: mono,  optical_size: "12pt", x_height: 0.535, k_tracking: 0.0, leading_base: 1.5, word_space: 0.0),
+    ],
+    colors: [
+        (name: "fg",             light: "#171717", dark: "#E8E4DC"),
+        (name: "fg-muted",       light: "#59544C", dark: "#A8A196"),
+        (name: "fg-subtle",      light: "#7A746A", dark: "#8A8378"),
+        (name: "bg",             light: "#F6F2E9", dark: "#14120E"),
+        (name: "bg-subtle",      light: "#EFE9DC", dark: "#1E1B16"),
+        (name: "rule",           light: "#C4BDB0", dark: "#3A362F"),
+        (name: "accent",         light: "#7A2E28", dark: "#E09A93"),
+        (name: "accent-hover",   light: "#5E211C", dark: "#EFB8B1"),
+        (name: "accent-subtle",  light: "#F0E2DE", dark: "#2E1614"),
+        (name: "accent-rule",    light: "#C9A5A0", dark: "#4A2A26"),
+        (name: "accent-visited", light: "#5A3A52", dark: "#C9A5C4"),
+    ],
+    multipliers: [
+        (name: "n1", value: 0.5), (name: "base", value: 1.0), (name: "p1", value: 2.0),
+        (name: "p2", value: 3.0), (name: "p3", value: 4.0),   (name: "p4", value: 6.0),
+        (name: "p5", value: 8.0), (name: "p6", value: 12.0),
+    ],
+)

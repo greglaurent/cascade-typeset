@@ -1,0 +1,65 @@
+/* cascade-css — font.css  ({{ banner }})
+ * Font families (per category) + the optical profile: size-dependent tracking,
+ * leading, word-space. Families are per category (body / heading / code) so a
+ * serif body can pair with sans headings. Optical formulas (cascade's optical-size
+ * is reinterpreted as the body base, so ln(size/optical) → (step/n)·ln(ratio)):
+ *   tracking_em(i) = clamp(±tc,  -kt · (i/n) · ln(ratio))
+ *   line-height(i) = clamp(lmin, lb + (measure-65)·0.006 − (xh−0.5)·0.8 − 0.10·(i/n)·ln(ratio),  lmax)
+ *   word_space(i)  = (bws − kws · (i/n) · ln(ratio)) em
+ */
+
+.cascade {
+  /* ── Font stacks ── */
+{% for s in stacks %}  --cf-font-{{ s.name }}: {{ s.css }};
+{% endfor %}
+  /* ── Active family per category ── */
+  --cf-family-body:    var(--cf-font-{{ def_stack }});
+  --cf-family-heading: var(--cf-family-body);   /* default: same as body */
+  --cf-family-code:    var(--cf-font-mono);
+
+  /* ── Body optical params (default: {{ def_name }}) ── */
+  --cf-xh: {{ def_xh }};
+  --cf-kt: {{ def_kt }};
+  --cf-lb: {{ def_lb }};
+  --cf-bws: {{ def_bws }};
+  --cf-kws: {{ kws }};
+  --cf-tc: {{ tc }};
+  --cf-lmin: {{ lmin }};
+  --cf-lmax: {{ lmax }};
+  --cf-measure: {{ measure }};
+  --cf-size-min: {{ size_min_web }};   /* readability floor for small roles */
+  --cf-lead0: calc(var(--cf-lb) + (var(--cf-measure) - 65) * 0.006 - (var(--cf-xh) - 0.5) * 0.8);
+
+  /* ── Heading optical params (default: = body) ── */
+  --cf-h-xh: var(--cf-xh);
+  --cf-h-kt: var(--cf-kt);
+  --cf-h-lb: var(--cf-lb);
+  --cf-h-lead0: calc(var(--cf-h-lb) + (var(--cf-measure) - 65) * 0.006 - (var(--cf-h-xh) - 0.5) * 0.8);
+
+  /* ── body tracking per step (em) ── */
+{% for e in neg %}  --cf-track-{{ e.label }}: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) * {{ e.num }} / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+{% endfor %}  --cf-track-0:  0em;
+{% for e in pos %}  --cf-track-{{ e.label }}: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-kt) * {{ e.num }} / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+{% endfor %}
+  /* ── body line-height per step (unitless, clamped) ── */
+{% for e in neg %}  --cf-lead-{{ e.label }}: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 * {{ e.num }} / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+{% endfor %}  --cf-lead-0:  clamp(var(--cf-lmin), var(--cf-lead0), var(--cf-lmax));
+{% for e in pos %}  --cf-lead-{{ e.label }}: clamp(var(--cf-lmin), calc(var(--cf-lead0) - 0.10 * {{ e.num }} / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+{% endfor %}
+  /* ── heading tracking + line-height (p1..p4 = h4..h1) ── */
+{% for k in heads %}  --cf-h-track-p{{ k }}: clamp(calc(-1 * var(--cf-tc) * 1em), calc(-1 * var(--cf-h-kt) * {{ k }} / var(--cs-n) * var(--cs-ln-ratio) * 1em), calc(var(--cf-tc) * 1em));
+{% endfor %}{% for k in heads %}  --cf-h-lead-p{{ k }}: clamp(var(--cf-lmin), calc(var(--cf-h-lead0) - 0.10 * {{ k }} / var(--cs-n) * var(--cs-ln-ratio)), var(--cf-lmax));
+{% endfor %}
+  /* ── word-space (body, step 0) ── */
+  --cf-ws-0: calc(var(--cf-bws) * 1em);
+}
+
+/* ── Body optical profiles — class on the .cascade box ── */
+{% for p in profile_classes %}.cascade.profile-{{ p.name }} { --cf-xh: {{ p.xh }}; --cf-kt: {{ p.kt }}; --cf-lb: {{ p.lb }}; --cf-bws: {{ p.bws }}; }
+{% endfor %}
+/* ── Body bundles (family + optical) ── */
+{% for b in bundle_classes %}.cascade.bundle-{{ b.name }} { --cf-family-body: var(--cf-font-{{ b.stack }}); --cf-xh: {{ b.xh }}; --cf-kt: {{ b.kt }}; --cf-lb: {{ b.lb }}; --cf-bws: {{ b.bws }}; }
+{% endfor %}
+/* ── Heading bundles (heading family + heading optical) ── */
+{% for h in heading_classes %}.cascade.heading-{{ h.name }} { --cf-family-heading: var(--cf-font-{{ h.stack }}); --cf-h-xh: {{ h.xh }}; --cf-h-kt: {{ h.kt }}; --cf-h-lb: {{ h.lb }}; }
+{% endfor %}

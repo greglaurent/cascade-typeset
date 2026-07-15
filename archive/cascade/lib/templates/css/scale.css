@@ -1,0 +1,23 @@
+/* cascade-css — scale.css  ({{ banner }})
+ * Fluid typographic scale:  f_i = base · ratio^(i/n). Pick a preset (sets
+ * --cs-ratio/--cs-n) and a fluid --cs-base; every step derives via pow(). Because
+ * --cs-base is a clamp(), the whole scale tracks the viewport (Utopia-style).
+ * Requires pow()/log(): Chrome/Edge 111+, Safari 15.4+, Firefox 118+.
+ */
+
+.cascade {
+  --cs-base: {{ base_web }};
+
+  /* Default preset: {{ default_name }}. Override with a .scale-* class. */
+  --cs-ratio: {{ default_ratio }};
+  --cs-n: {{ default_n }};
+  --cs-ln-ratio: log(var(--cs-ratio));   /* natural log; recomputes with --cs-ratio */
+
+{% for e in neg %}  --cs-size-{{ e.label }}: calc(var(--cs-base) * pow(var(--cs-ratio), calc({{ e.num }} / var(--cs-n))));
+{% endfor %}  --cs-size-0:  var(--cs-base);
+{% for e in pos %}  --cs-size-{{ e.label }}: calc(var(--cs-base) * pow(var(--cs-ratio), calc({{ e.num }} / var(--cs-n))));
+{% endfor %}}
+
+/* ── Scale presets — add as a class on the .cascade box ── */
+{% for p in presets %}.cascade.scale-{{ p.name }} { --cs-ratio: {{ p.ratio }}; --cs-n: {{ p.n }}; }
+{% endfor %}

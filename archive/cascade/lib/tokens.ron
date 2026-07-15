@@ -1,0 +1,96 @@
+// cascade-typeset — the typographic SPEC (the engine). Maintainer-owned.
+// The deep definitions: scale math, optical model, theme, rhythm, generic families.
+// The consumer-facing "what's supported/packaged" surface lives separately in
+// cascade.ron. Decoded by cascade-lib via RON + serde straight into the Spec model.
+// The NUMBERS live here; the FORMULAS that consume them live in each renderer's templates.
+(
+    scale: (
+        // Fundamental body size. print = fixed pt; web = fluid clamp (Utopia-style).
+        base: (print: "11pt", web: "clamp(1.125rem, 1.02rem + 0.42vw, 1.375rem)"),
+        // The scale spans i in [min, max]; size_i = base · ratio^(i/n).
+        steps: (min: -5, max: 5),
+        default: "classical",
+        // Mortensen presets: ratio (r) and notes-per-interval (n).
+        presets: [
+            (name: "classical",      ratio: 2.0,                n: 5),
+            (name: "golden-ratio",   ratio: 1.6180339887498949, n: 1),
+            (name: "golden-ditonic", ratio: 1.6180339887498949, n: 2),
+            (name: "tritonic",       ratio: 2.0,                n: 3),
+            (name: "tetratonic",     ratio: 2.0,                n: 4),
+            (name: "major-third",    ratio: 1.25,               n: 1),
+            (name: "minor-third",    ratio: 1.2,                n: 1),
+        ],
+    ),
+    optical: (
+        word_space_k: 0.04,   // k-word-space
+        tracking_clamp: 0.04, // max |tracking|, em
+        leading_clamp: (min: 1.2, max: 1.45),   // Butterick: hold line-spacing 120–145%
+        measure: 65,          // default line length, ch
+        size_min: (print: "8pt", web: "0.75rem"),   // readability floor for small roles
+        // optical_size is Typst-only (CSS reinterprets it as the body base).
+        profiles: [
+            (name: "sans-ui",    optical_size: "14pt", x_height: 0.53, k_tracking: 0.035, leading_base: 1.45, word_space: 0.25),
+            (name: "sans-text",  optical_size: "12pt", x_height: 0.53, k_tracking: 0.03,  leading_base: 1.45, word_space: 0.28),
+            (name: "serif-text", optical_size: "11pt", x_height: 0.49, k_tracking: 0.022, leading_base: 1.35, word_space: 0.28),
+            (name: "sf-pro",     optical_size: "12pt", x_height: 0.53, k_tracking: 0.045, leading_base: 1.45, word_space: 0.25),
+        ],
+    ),
+    theme: (
+        // Curated light + dark palettes (both explicit hex; dark is hand-tuned, not a flip).
+        light: [
+            (name: "fg",             hex: "#171717"),
+            (name: "fg-muted",       hex: "#59544C"),
+            (name: "fg-subtle",      hex: "#7A746A"),
+            (name: "bg",             hex: "#F6F2E9"),
+            (name: "bg-subtle",      hex: "#EFE9DC"),
+            (name: "rule",           hex: "#C4BDB0"),
+            (name: "accent",         hex: "#7A2E28"),   // oxblood
+            (name: "accent-hover",   hex: "#5E211C"),
+            (name: "accent-subtle",  hex: "#F0E2DE"),
+            (name: "accent-rule",    hex: "#C9A5A0"),
+            (name: "accent-visited", hex: "#5A3A52"),   // muted plum (CSS only)
+        ],
+        dark: [
+            (name: "fg",             hex: "#E8E4DC"),
+            (name: "fg-muted",       hex: "#A8A196"),
+            (name: "fg-subtle",      hex: "#8A8378"),
+            (name: "bg",             hex: "#14120E"),
+            (name: "bg-subtle",      hex: "#1E1B16"),
+            (name: "rule",           hex: "#3A362F"),
+            (name: "accent",         hex: "#E09A93"),   // lifted for contrast on the dark ground
+            (name: "accent-hover",   hex: "#EFB8B1"),
+            (name: "accent-subtle",  hex: "#2E1614"),
+            (name: "accent-rule",    hex: "#4A2A26"),
+            (name: "accent-visited", hex: "#C9A5C4"),   // muted mauve
+        ],
+    ),
+    rhythm: (
+        // Grid unit: print = fixed 4pt; web = fraction of the fluid base.
+        unit: (print: "4pt", web: 0.375),
+        // Spacing multipliers (× unit). Practical steps — Apple/Material/Carbon.
+        multipliers: [
+            (name: "n1",   value: 0.5),
+            (name: "base", value: 1.0),
+            (name: "p1",   value: 2.0),
+            (name: "p2",   value: 3.0),
+            (name: "p3",   value: 4.0),
+            (name: "p4",   value: 6.0),
+            (name: "p5",   value: 8.0),
+            (name: "p6",   value: 12.0),
+        ],
+    ),
+    generics: (
+        // The built-in generic families + their optical-profile pairings.
+        default: "serif",
+        stacks: [
+            (name: "serif", typst: "Libertinus Serif", css: r#""Libertinus Serif", Georgia, "Times New Roman", serif"#),
+            (name: "sans",  typst: "Inter",            css: r#""Inter", system-ui, -apple-system, sans-serif"#),
+            (name: "mono",  typst: "DejaVu Sans Mono", css: r#""DejaVu Sans Mono", ui-monospace, SFMono-Regular, monospace"#),
+        ],
+        bundles: [
+            (name: "serif", stack: "serif", profile: "serif-text"),
+            (name: "sans",  stack: "sans",  profile: "sans-text"),
+            (name: "mono",  stack: "mono",  profile: "sans-text"),
+        ],
+    ),
+)

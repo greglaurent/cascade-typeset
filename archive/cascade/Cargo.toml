@@ -1,0 +1,8 @@
+# cascade — Rust workspace for the typesetting toolchain.
+#   lib/  cascade-lib  — the renderer: TOML tokens → askama templates → cascade-css/ + cascade-typst/
+#   web/  cascade-web  — dev server that serves the examples (replaces site/serve.ts)
+# The two are separate on purpose: the renderer is the typesetting system; the web
+# project only previews it. Build both with `cargo build` from here.
+[workspace]
+resolver = "2"
+members = ["lib", "web"]

@@ -1,0 +1,2 @@
+cargo:rerun-if-changed=tokens.ron
+cargo:rerun-if-changed=fonts

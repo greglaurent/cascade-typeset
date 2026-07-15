@@ -1,0 +1,36 @@
+/* cascade-css — fonts/{{ name }}.css  ({{ banner }})
+ * Font-specific preset for {{ cap_name }}: sets the family AND the optical variables
+ * that depend on this typeface (mirror of cascade's font.bundles.{{ name }}).
+ * Measured (OS/2, unitsPerEm {{ units_per_em }}): x-height {{ measured_xh }} ({{ sx }}), cap-height {{ cap_height }},
+ * typo asc/desc {{ asc }} / {{ desc }}. x-height is MEASURED; the rest starts from the
+ * {{ category }}-text profile. Load AFTER cascade.css.
+ */
+
+.cascade.bundle-{{ name }} {
+  --cf-family-body: {{ family_css }};
+  --cf-xh:  {{ p_xh }};
+  --cf-kt:  {{ p_kt }};
+  --cf-lb:  {{ p_lb }};
+  --cf-bws: {{ p_bws }};
+}
+
+.cascade.heading-{{ name }} {
+  --cf-family-heading: {{ family_css }};
+  --cf-h-xh: {{ p_xh }};
+  --cf-h-kt: {{ p_kt }};
+  --cf-h-lb: {{ p_lb }};
+}
+{% if let Some(nz) = normalize %}
+/* Optional cross-font size normalization: an alias scaled so {{ cap_name }}'s x-height
+ * ({{ p_xh }}) matches {{ nz.to_xh }}.  size-adjust ≈ {{ nz.to_xh }} / {{ p_xh }} = {{ nz.size_adjust }}. */
+@font-face {
+  font-family: "{{ nz.alias }}";
+  src: local("{{ nz.family_typst }}"), local("{{ nz.family_typst }}Variable");
+  size-adjust: {{ nz.size_adjust }};
+  ascent-override: {{ nz.ascent }};
+  descent-override: {{ nz.descent }};
+}
+/* Use via a preset whose --cf-xh is the normalized x-height ({{ nz.to_xh }}):
+ *   .cascade.bundle-{{ name }}-norm { --cf-family-body: "{{ nz.alias }}", sans-serif;
+ *     --cf-xh: {{ nz.to_xh }}; --cf-kt: {{ p_kt }}; --cf-lb: {{ p_lb }}; --cf-bws: {{ p_bws }}; } */
+{% endif %}

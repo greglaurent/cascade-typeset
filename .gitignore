@@ -1,5 +1,0 @@
-# Built Typst artifacts (regenerate with `just pdf`)
-*.pdf
-
-# Ephemeral verify probe (created/removed by `just verify`)
-cascade-typst/_probe.typ

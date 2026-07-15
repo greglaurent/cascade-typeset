@@ -1,0 +1,9 @@
+[package]
+name = "cascade-css"
+version = "0.1.0"
+edition = "2024"
+
+# A Renderer implementation. Depends only on the protocol (the spec types + the contract).
+[dependencies]
+askama = "0.16.0"
+cascade = { path = "../cascade" }

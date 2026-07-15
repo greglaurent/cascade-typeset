@@ -1,0 +1,11 @@
+[package]
+name = "cascade"
+version = "0.1.0"
+edition = "2024"
+
+# The spec (tokens.ron) is COMPILED INTO TYPES at build time by build.rs. serde/ron are
+# build-time-only (they read the spec for codegen). The generated types are plain Rust,
+# so the library has ZERO runtime dependencies — the spec *is* the type system.
+[build-dependencies]
+serde = { version = "1", features = ["derive"] }
+ron = "0.12"

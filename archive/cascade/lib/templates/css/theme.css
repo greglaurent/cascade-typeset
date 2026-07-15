@@ -1,0 +1,37 @@
+/* cascade-css — theme.css  ({{ banner }})
+ * Semantic color tokens. Light and dark are both curated (explicit hex). Dark applies
+ * on the system pref or [data-theme="dark"]; [data-theme="light"] forces light. The
+ * derived tokens live on .cascade so they recompute from whatever base is active.
+ */
+
+/* ── base tokens: light (default) ── */
+:root {
+{% for c in light %}  {{ c.padded_name }} {{ c.hex }};
+{% endfor %}}
+
+/* ── base tokens: dark (system preference) ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+{% for c in dark %}    {{ c.padded_name }} {{ c.hex }};
+{% endfor %}  }
+}
+
+/* ── explicit overrides on any element (win over system pref) ── */
+[data-theme="light"] {
+{% for c in light %}  {{ c.padded_name }} {{ c.hex }};
+{% endfor %}}
+[data-theme="dark"] {
+{% for c in dark %}  {{ c.padded_name }} {{ c.hex }};
+{% endfor %}}
+
+/* ── derived tokens: resolve from whatever base is active on this container ── */
+.cascade {
+  --ct-link:         var(--ct-accent);
+  --ct-link-hover:   var(--ct-accent-hover);
+  --ct-link-visited: var(--ct-accent-visited);
+  --ct-code-fg:      var(--ct-fg);
+  --ct-code-bg:      var(--ct-bg-subtle);
+  --ct-quote-rule:   var(--ct-accent-rule);
+  --ct-quote-bg:     transparent;
+}
+

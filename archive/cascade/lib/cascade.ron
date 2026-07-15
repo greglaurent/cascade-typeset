@@ -1,0 +1,38 @@
+// cascade-typeset — the build MANIFEST: what this cascade build supports and ships.
+// Consumer-editable and deliberately simple. It enumerates the exposed options (scales,
+// themes, sidenote modes) and the specific typefaces this build packages.
+// To support another font, add an entry to `fonts`. The deep engine lives in tokens.ron.
+// Decoded by cascade-lib via RON + serde.
+(
+    // Exposed scale presets (names defined in tokens.ron → scale.presets).
+    scales: ["classical", "golden-ratio", "golden-ditonic", "tritonic", "tetratonic", "major-third", "minor-third"],
+    // Exposed themes.
+    themes: ["light", "dark"],
+    // Expose the margin-notes vs footnotes toggle.
+    sidenotes: true,
+    // Packaged / supported typefaces. Each drops into the system with correct optical
+    // spacing. x-height is MEASURED (OS/2); the rest starts from the category profile.
+    // Omit `normalize` unless cross-font size-normalizing; omit `asset` unless the build
+    // ships the font file itself.
+    fonts: [
+        (
+            name: "lora", category: serif,
+            family: (typst: "Lora", css: r#""Lora", Georgia, "Times New Roman", serif"#),
+            profile: (optical_size: "11pt", x_height: 0.50, k_tracking: 0.022, leading_base: 1.38, word_space: 0.28),
+            measured: (x_height: 0.50, cap_height: 0.70, units_per_em: 1000, sx: "sxHeight 500", asc: "1.006", desc: "-0.274"),
+        ),
+        (
+            name: "inter", category: sans,
+            family: (typst: "Inter", css: r#""Inter", system-ui, -apple-system, sans-serif"#),
+            profile: (optical_size: "12pt", x_height: 0.546, k_tracking: 0.03, leading_base: 1.45, word_space: 0.26),
+            measured: (x_height: 0.546, cap_height: 0.728, units_per_em: 2048, sx: "sxHeight 1118", asc: "0.969", desc: "-0.241"),
+            normalize: Some((alias: "Inter xh-normalized", to_x_height: 0.50, size_adjust: "91.6%", ascent: "90%", descent: "22%")),
+        ),
+        (
+            name: "jost", category: sans,
+            family: (typst: "Jost", css: r#""Jost", "Century Gothic", system-ui, sans-serif"#),
+            profile: (optical_size: "12pt", x_height: 0.46, k_tracking: 0.03, leading_base: 1.45, word_space: 0.28),
+            measured: (x_height: 0.46, cap_height: 0.70, units_per_em: 1000, sx: "sxHeight 460", asc: "1.07", desc: "-0.375"),
+        ),
+    ],
+)

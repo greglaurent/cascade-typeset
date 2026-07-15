@@ -1,0 +1,8 @@
+# Built Typst artifacts (regenerate with `just pdf`)
+*.pdf
+
+# Rust build artifacts (cascade/ workspace)
+cascade/target/
+
+# Ephemeral verify probe (created/removed by `just verify`)
+cascade-typst/_probe.typ

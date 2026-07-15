@@ -1,0 +1,17 @@
+:root {
+  --primary-color: {{ primary_color }};
+  --secondary-color: {{ secondary_color }};
+  --border-radius: {{ radius_px }}px;
+  --font-stack: {{ font_stack }};
+}
+
+body {
+  background-color: var(--primary-color);
+  font-family: var(--font-stack);
+}
+
+.button {
+  border-radius: var(--border-radius);
+  padding: 10px 20px;
+}
+
