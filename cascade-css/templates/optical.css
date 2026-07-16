@@ -1,0 +1,53 @@
+/* cascade-css — optical.css (generated from the spec) */
+.cascade {
+  /* families per font-role: body and heading are independent typefaces (from the spec's
+     default_fonts); code is the generic mono family. */
+  --cf-family-body:    {{ body_family }};
+  --cf-family-heading: {{ heading_family }};
+  --cf-family-code:    {{ code_family }};
+
+  /* generic font stacks per category — targets for the bundle-serif/sans/mono + heading-* switches */
+  --cf-font-serif: {{ font_serif }};
+  --cf-font-sans:  {{ font_sans }};
+  --cf-font-mono:  {{ font_mono }};
+
+  /* body optical params (from the body font) */
+  --cf-xh: {{ xh }};
+  --cf-kt: {{ kt }};
+  --cf-lb: {{ lb }};
+  --cf-bws: {{ bws }};
+  --cf-kws: {{ kws }};
+  --cf-tc: {{ tc }};
+  --cf-lmin: {{ lmin }};
+  --cf-lmax: {{ lmax }};
+  --cf-measure: {{ measure }};
+  --cf-size-min: {{ size_min }};
+  --cf-lead0: {{ lead0 }};
+
+  /* heading optical params (from the heading font) */
+  --cf-h-xh: {{ h_xh }};
+  --cf-h-kt: {{ h_kt }};
+  --cf-h-lb: {{ h_lb }};
+  --cf-h-bws: {{ h_bws }};
+  --cf-h-lead0: {{ h_lead0 }};
+
+  /* body tracking per step (em) — formula::tracking, projected */
+{% for r in tracks %}  {{ r.name }}: {{ r.value }};
+{% endfor %}
+  /* body line-height per step (unitless, clamped) — formula::leading, projected */
+{% for r in leads %}  {{ r.name }}: {{ r.value }};
+{% endfor %}
+  /* body word-space per step (em) — formula::word_space, projected */
+{% for r in word_spaces %}  {{ r.name }}: {{ r.value }};
+{% endfor %}
+  /* heading tracking + line-height + word-space (p1..p4 = h4..h1) */
+{% for r in h_tracks %}  {{ r.name }}: {{ r.value }};
+{% endfor %}{% for r in h_leads %}  {{ r.name }}: {{ r.value }};
+{% endfor %}{% for r in h_word_spaces %}  {{ r.name }}: {{ r.value }};
+{% endfor %}}
+
+/* generic body + heading bundles (serif/sans/mono) — switch the family to the generic stack and
+   reset the optical to that category's baseline; class on the .cascade box. */
+{% for p in profiles %}.cascade.bundle-{{ p.id }} { --cf-family-body: var(--cf-font-{{ p.id }}); --cf-xh: {{ p.xh }}; --cf-kt: {{ p.kt }}; --cf-lb: {{ p.lb }}; --cf-bws: {{ p.bws }}; }
+.cascade.heading-{{ p.id }} { --cf-family-heading: var(--cf-font-{{ p.id }}); --cf-h-xh: {{ p.xh }}; --cf-h-kt: {{ p.kt }}; --cf-h-lb: {{ p.lb }}; }
+{% endfor %}

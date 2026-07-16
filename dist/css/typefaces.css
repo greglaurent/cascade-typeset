@@ -1,0 +1,22 @@
+/* cascade-css — typefaces.css (generated from the spec) */
+.cascade.bundle-inter {
+  --cf-family-body: "Inter", system-ui, -apple-system, sans-serif;
+  --cf-xh:  0.546;
+  --cf-kt:  0.03;
+  --cf-lb:  1.45;
+  --cf-bws: 0.26;
+}
+.cascade.bundle-jost {
+  --cf-family-body: "Jost", system-ui, -apple-system, sans-serif;
+  --cf-xh:  0.46;
+  --cf-kt:  0.03;
+  --cf-lb:  1.45;
+  --cf-bws: 0.28;
+}
+.cascade.bundle-lora {
+  --cf-family-body: "Lora", Georgia, "Times New Roman", serif;
+  --cf-xh:  0.5;
+  --cf-kt:  0.022;
+  --cf-lb:  1.38;
+  --cf-bws: 0.28;
+}

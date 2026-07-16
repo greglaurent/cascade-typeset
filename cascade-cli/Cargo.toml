@@ -1,0 +1,26 @@
+[package]
+name = "cascade-cli"
+version = "0.1.0"
+edition = "2024"
+
+# The COMPOSITION ROOT — the only crate that touches the filesystem for output and the outside
+# world for input. It resolves the consumer's limited surface (a TOML/JSON config + flags) into a
+# `cascade::renderer::Config`, drives each Renderer, and writes the files. `measure` reads a font
+# file's OS/2 metrics and emits a fonts/*.ron the spec then compiles in. Replaces the justfile.
+#
+# The consumer config is mainstream (TOML/JSON), NOT ron — ron is the spec's internal format, not
+# something a consumer should have to author.
+[[bin]]
+name = "cascade"
+path = "src/main.rs"
+
+[dependencies]
+cascade = { path = "../cascade" }
+cascade-css = { path = "../cascade-css" }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+# Consumer-facing config + the output manifest — familiar formats, read/written with serde.
+toml = "0.8"
+serde_json = "1"
+# Pure-Rust OpenType/TrueType reader — reads OS/2 sxHeight/capHeight + head unitsPerEm for `measure`.
+ttf-parser = "0.25"

@@ -1,0 +1,17 @@
+// cascade — theme PALETTE: "slate". Cool neutral paper + a slate-blue accent. Same swatch
+// vocabulary as paper.ron; different values. See paper.ron for the palette contract.
+(
+    palette: [
+        (name: "fg",             light: "#1A1D21", dark: "#E4E7EB"),
+        (name: "fg-muted",       light: "#4B525B", dark: "#9AA4B0"),
+        (name: "fg-subtle",      light: "#6B7480", dark: "#7C8593"),
+        (name: "bg",             light: "#F5F7FA", dark: "#0F1216"),
+        (name: "bg-subtle",      light: "#E9EDF2", dark: "#191D23"),
+        (name: "rule",           light: "#C2C9D2", dark: "#333A43"),
+        (name: "accent",         light: "#2F5E8A", dark: "#8FB8E0"),
+        (name: "accent-hover",   light: "#234A6E", dark: "#B0D0F0"),
+        (name: "accent-subtle",  light: "#E1EAF3", dark: "#14212E"),
+        (name: "accent-rule",    light: "#A6BFD6", dark: "#294056"),
+        (name: "accent-visited", light: "#4A4370", dark: "#B7ABE0"),
+    ],
+)

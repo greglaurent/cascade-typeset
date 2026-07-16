@@ -1,0 +1,15 @@
+/* cascade-css — typefaces.css (generated from the spec) */
+{% for f in fonts %}.cascade.bundle-{{ f.slug }} {
+  --cf-family-body: {{ f.family }};
+  --cf-xh:  {{ f.x_height }};
+  --cf-kt:  {{ f.k_tracking }};
+  --cf-lb:  {{ f.leading_base }};
+  --cf-bws: {{ f.word_space }};
+}
+.cascade.heading-{{ f.slug }} {
+  --cf-family-heading: {{ f.family }};
+  --cf-h-xh: {{ f.x_height }};
+  --cf-h-kt: {{ f.k_tracking }};
+  --cf-h-lb: {{ f.leading_base }};
+}
+{% endfor %}

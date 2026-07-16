@@ -8,8 +8,17 @@
 // font's CSS fallback stack, its Typst family, the fluid-vs-fixed base size — is renderer
 // BEHAVIOR, implemented against the Renderer contract, NOT stored here. (Scalars that only
 // exist as print/web reps are intentionally deferred to that boundary.)
+//
+// COLOR is intentionally absent: the palette/theme is a separate, swappable layer (theme.ron),
+// combined with this structural schema by each renderer. A `role` therefore carries structure
+// only — step, font, weight, spacing, flags — never a colour.
+#![enable(implicit_some)]
 (
     scale_default: "golden-ditonic",
+    // Default typeface PER font-role (each a font in fonts/). body and heading are independent —
+    // a role's `font: body|heading` resolves to the matching face and ITS measured optical.
+    // `code` uses the generic mono family + the mono category optical.
+    default_fonts: (body: "Inter", heading: "Lora"),
     scale_steps: (min: -5, max: 5),
     scale_presets: [
         (name: "classical",      ratio: 2.0,                n: 5),
@@ -37,22 +46,46 @@
         // optical.leading_clamp max is now 1.5, so code reaches ~1.47 effective rather than capping at 1.45).
         (category: mono,  optical_size: "12pt", x_height: 0.535, k_tracking: 0.0, leading_base: 1.5, word_space: 0.0),
     ],
-    colors: [
-        (name: "fg",             light: "#171717", dark: "#E8E4DC"),
-        (name: "fg-muted",       light: "#59544C", dark: "#A8A196"),
-        (name: "fg-subtle",      light: "#7A746A", dark: "#8A8378"),
-        (name: "bg",             light: "#F6F2E9", dark: "#14120E"),
-        (name: "bg-subtle",      light: "#EFE9DC", dark: "#1E1B16"),
-        (name: "rule",           light: "#C4BDB0", dark: "#3A362F"),
-        (name: "accent",         light: "#7A2E28", dark: "#E09A93"),
-        (name: "accent-hover",   light: "#5E211C", dark: "#EFB8B1"),
-        (name: "accent-subtle",  light: "#F0E2DE", dark: "#2E1614"),
-        (name: "accent-rule",    light: "#C9A5A0", dark: "#4A2A26"),
-        (name: "accent-visited", light: "#5A3A52", dark: "#C9A5C4"),
-    ],
+    // NOTE: colours live in theme.ron (the swappable colour layer), NOT here.
     multipliers: [
         (name: "n1", value: 0.5), (name: "base", value: 1.0), (name: "p1", value: 2.0),
         (name: "p2", value: 3.0), (name: "p3", value: 4.0),   (name: "p4", value: 6.0),
         (name: "p5", value: 8.0), (name: "p6", value: 12.0),
+    ],
+    // The DOCUMENT MODEL: semantic roles bound to structure. Each role maps element(s) to a
+    // scale step, a font role (body/heading/code), a weight, block spacing (rhythm-step ids, or
+    // "baseline" = one line), and style flags. This is the universal "h1 = p4" binding — it lives
+    // HERE so both renderers project the SAME document, and neither can author it. Colour is NOT a
+    // field: the role→colour binding lives in the theme layer, combined by the renderer.
+    // `elements` are semantic identities; a renderer translates them by role type (CSS selectors,
+    // Typst show rules). Optional fields omitted = None / false (font/step inherit).
+    roles: [
+        (name: "root",       elements: [],                       kind: block,  step: 0, font: body),
+        (name: "body",       elements: ["p"],                    kind: block,  step: 0, font: body,    space_after: "baseline"),
+        (name: "heading-1",  elements: ["h1"],                   kind: block,  step: 4, font: heading, weight: 700, space_before: "p4", space_after: "p2"),
+        (name: "heading-2",  elements: ["h2"],                   kind: block,  step: 3, font: heading, weight: 600, space_before: "p3", space_after: "p1"),
+        (name: "heading-3",  elements: ["h3"],                   kind: block,  step: 2, font: heading, weight: 600, space_before: "p2", space_after: "0"),
+        (name: "heading-4",  elements: ["h4"],                   kind: block,  step: 1, font: heading, weight: 600, space_before: "p1", space_after: "0"),
+        (name: "text-1",     elements: [".text-1"],              kind: inline, step: -2, font: body),
+        (name: "text-2",     elements: [".text-2"],              kind: inline, step: -1, font: body),
+        (name: "text-3",     elements: [".text-3"],              kind: inline, step: 0,  font: body),
+        (name: "text-4",     elements: [".text-4"],              kind: inline, step: 1,  font: body),
+        (name: "text-5",     elements: [".text-5"],              kind: inline, step: 2,  font: body),
+        (name: "strong",     elements: ["strong", "b"],          kind: inline, weight: 700),
+        (name: "emphasis",   elements: ["em", "i", "cite"],      kind: inline, italic: true),
+        (name: "small",      elements: ["small"],                kind: inline, step: -1),
+        (name: "link",       elements: ["a"],                    kind: inline, underline: true),
+        (name: "quote",      elements: ["blockquote"],           kind: block,  italic: true, space_before: "baseline", space_after: "baseline"),
+        (name: "code",       elements: ["code", "kbd", "samp"],  kind: inline, font: code),
+        (name: "code-block", elements: ["pre"],                  kind: block,  font: code, space_after: "baseline"),
+        (name: "list",       elements: ["ul", "ol"],             kind: block,  space_after: "baseline"),
+        (name: "figure",     elements: ["figure"],               kind: block,  space_before: "p4", space_after: "p4"),
+        (name: "caption",    elements: ["figcaption"],           kind: block,  step: -2, font: body, italic: true),
+        (name: "footnotes",  elements: [".footnotes"],           kind: block,  step: -2, font: body),
+        // Tufte notes — semantic content roles (typography like footnotes). Their PLACEMENT
+        // (margin float / disclosure) is renderer presentation, not spec; see cascade-css sidenotes.
+        (name: "sidenote",   elements: [".sidenote"],            kind: inline, step: -2, font: body),
+        (name: "marginnote", elements: [".marginnote"],          kind: inline, step: -2, font: body),
+        (name: "divider",    elements: ["hr"],                   kind: block,  space_before: "p4", space_after: "p4"),
     ],
 )

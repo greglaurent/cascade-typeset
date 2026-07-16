@@ -7,7 +7,7 @@
   --cs-n: {{ default_n }};
   --cs-ln-ratio: log(var(--cs-ratio));
 
-{% for s in sizes %}  --cs-size-{{ s.label }}: {{ s.expr }};
+{% for s in sizes %}  {{ s.name }}: {{ s.expr }};
 {% endfor %}}
 
 /* presets — add as a class on .cascade */

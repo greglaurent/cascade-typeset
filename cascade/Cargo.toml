@@ -3,9 +3,12 @@ name = "cascade"
 version = "0.1.0"
 edition = "2024"
 
-# The spec (tokens.ron) is COMPILED INTO TYPES at build time by build.rs. serde/ron are
-# build-time-only (they read the spec for codegen). The generated types are plain Rust,
-# so the library has ZERO runtime dependencies — the spec *is* the type system.
+# The spec (tokens.ron + theme.ron + themes/ + fonts/) is COMPILED INTO TYPES at build time by
+# build.rs: it reads the RON from CARGO_MANIFEST_DIR and writes the generated Rust to OUT_DIR, which
+# src/spec.rs `include!`s. cargo sets both correctly for any build, so `cascade` is usable as a
+# dependency (path/git/registry) in any workspace -- a website can depend on cascade-css and render
+# CSS via its API. serde/ron are BUILD-only; the generated types are plain Rust, so the library has
+# ZERO runtime dependencies.
 [build-dependencies]
 serde = { version = "1", features = ["derive"] }
 ron = "0.12"

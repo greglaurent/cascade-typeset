@@ -7,3 +7,6 @@ edition = "2024"
 [dependencies]
 askama = "0.16.0"
 cascade = { path = "../cascade" }
+# CSS validation — used by the renderer's `verify` (browser-grade parse + calc/pow/clamp folding),
+# exposed to consumers via `cascade build --verify`, and by the test-suite's parity checks.
+lightningcss = { version = "=1.0.0-alpha.71", default-features = false }

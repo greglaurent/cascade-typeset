@@ -1,0 +1,12 @@
+# Rust build artifacts
+/target
+
+# Scratch build output. The shipped, committed DISTRIBUTION lives in /dist/<format> (see `just
+# dist`) and is tracked; anything else written under /dist (e.g. an ad-hoc `cascade build --out
+# dist`) is scratch and ignored.
+/dist/*
+!/dist/css/
+!/dist/README.md
+
+# Build bookkeeping (written into every --out dir)
+.cascade-manifest.json

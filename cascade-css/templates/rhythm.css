@@ -1,9 +1,9 @@
 /* cascade-css — rhythm.css (generated from the spec) */
 .cascade {
-  --cr-unit: calc(var(--cs-base) * {{ unit_fraction }});
+  --cr-unit: {{ unit }};
 
-{% for m in spaces %}  --cr-space-{{ m.label }}: calc(var(--cr-unit) * {{ m.factor }});
+{% for m in spaces %}  {{ m.name }}: {{ m.expr }};
 {% endfor %}
-  /* one body line */
-  --cr-baseline: calc(var(--cs-base) * var(--cf-lead-0));
+  /* one body line — formula::baseline(base, leading) */
+  --cr-baseline: {{ baseline }};
 }

@@ -1,0 +1,188 @@
+/* cascade-css — theme.css (generated from the spec)
+ *
+ * Two INDEPENDENT, runtime axes — this is CSS, so both resolve in the browser:
+ *   • palette  — [data-palette="<id>"]; the build's --theme is only the :root DEFAULT (paper).
+ *   • mode     — light | dark; system via @media, or forced with [data-theme="light"|"dark"].
+ * They compose: e.g. [data-palette="slate"][data-theme="dark"]. Semantic uses (.cascade) alias
+ * swatches, so they recompute from whichever palette × mode is active.
+ */
+
+/* ── default palette (paper) at :root; mode is reactive ── */
+:root {
+  --ct-fg: #171717;
+  --ct-fg-muted: #59544C;
+  --ct-fg-subtle: #7A746A;
+  --ct-bg: #F6F2E9;
+  --ct-bg-subtle: #EFE9DC;
+  --ct-rule: #C4BDB0;
+  --ct-accent: #7A2E28;
+  --ct-accent-hover: #5E211C;
+  --ct-accent-subtle: #F0E2DE;
+  --ct-accent-rule: #C9A5A0;
+  --ct-accent-visited: #5A3A52;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ct-fg: #E8E4DC;
+    --ct-fg-muted: #A8A196;
+    --ct-fg-subtle: #8A8378;
+    --ct-bg: #14120E;
+    --ct-bg-subtle: #1E1B16;
+    --ct-rule: #3A362F;
+    --ct-accent: #E09A93;
+    --ct-accent-hover: #EFB8B1;
+    --ct-accent-subtle: #2E1614;
+    --ct-accent-rule: #4A2A26;
+    --ct-accent-visited: #C9A5C4;
+  }
+}
+[data-theme="light"] {
+  --ct-fg: #171717;
+  --ct-fg-muted: #59544C;
+  --ct-fg-subtle: #7A746A;
+  --ct-bg: #F6F2E9;
+  --ct-bg-subtle: #EFE9DC;
+  --ct-rule: #C4BDB0;
+  --ct-accent: #7A2E28;
+  --ct-accent-hover: #5E211C;
+  --ct-accent-subtle: #F0E2DE;
+  --ct-accent-rule: #C9A5A0;
+  --ct-accent-visited: #5A3A52;
+}
+[data-theme="dark"] {
+  --ct-fg: #E8E4DC;
+  --ct-fg-muted: #A8A196;
+  --ct-fg-subtle: #8A8378;
+  --ct-bg: #14120E;
+  --ct-bg-subtle: #1E1B16;
+  --ct-rule: #3A362F;
+  --ct-accent: #E09A93;
+  --ct-accent-hover: #EFB8B1;
+  --ct-accent-subtle: #2E1614;
+  --ct-accent-rule: #4A2A26;
+  --ct-accent-visited: #C9A5C4;
+}
+
+/* ── every palette, switchable at runtime via [data-palette], orthogonal to the mode axis ── */
+[data-palette="paper"] {
+  --ct-fg: #171717;
+  --ct-fg-muted: #59544C;
+  --ct-fg-subtle: #7A746A;
+  --ct-bg: #F6F2E9;
+  --ct-bg-subtle: #EFE9DC;
+  --ct-rule: #C4BDB0;
+  --ct-accent: #7A2E28;
+  --ct-accent-hover: #5E211C;
+  --ct-accent-subtle: #F0E2DE;
+  --ct-accent-rule: #C9A5A0;
+  --ct-accent-visited: #5A3A52;
+}
+@media (prefers-color-scheme: dark) {
+  [data-palette="paper"] {
+    --ct-fg: #E8E4DC;
+    --ct-fg-muted: #A8A196;
+    --ct-fg-subtle: #8A8378;
+    --ct-bg: #14120E;
+    --ct-bg-subtle: #1E1B16;
+    --ct-rule: #3A362F;
+    --ct-accent: #E09A93;
+    --ct-accent-hover: #EFB8B1;
+    --ct-accent-subtle: #2E1614;
+    --ct-accent-rule: #4A2A26;
+    --ct-accent-visited: #C9A5C4;
+  }
+}
+[data-palette="paper"][data-theme="light"] {
+  --ct-fg: #171717;
+  --ct-fg-muted: #59544C;
+  --ct-fg-subtle: #7A746A;
+  --ct-bg: #F6F2E9;
+  --ct-bg-subtle: #EFE9DC;
+  --ct-rule: #C4BDB0;
+  --ct-accent: #7A2E28;
+  --ct-accent-hover: #5E211C;
+  --ct-accent-subtle: #F0E2DE;
+  --ct-accent-rule: #C9A5A0;
+  --ct-accent-visited: #5A3A52;
+}
+[data-palette="paper"][data-theme="dark"] {
+  --ct-fg: #E8E4DC;
+  --ct-fg-muted: #A8A196;
+  --ct-fg-subtle: #8A8378;
+  --ct-bg: #14120E;
+  --ct-bg-subtle: #1E1B16;
+  --ct-rule: #3A362F;
+  --ct-accent: #E09A93;
+  --ct-accent-hover: #EFB8B1;
+  --ct-accent-subtle: #2E1614;
+  --ct-accent-rule: #4A2A26;
+  --ct-accent-visited: #C9A5C4;
+}
+[data-palette="slate"] {
+  --ct-fg: #1A1D21;
+  --ct-fg-muted: #4B525B;
+  --ct-fg-subtle: #6B7480;
+  --ct-bg: #F5F7FA;
+  --ct-bg-subtle: #E9EDF2;
+  --ct-rule: #C2C9D2;
+  --ct-accent: #2F5E8A;
+  --ct-accent-hover: #234A6E;
+  --ct-accent-subtle: #E1EAF3;
+  --ct-accent-rule: #A6BFD6;
+  --ct-accent-visited: #4A4370;
+}
+@media (prefers-color-scheme: dark) {
+  [data-palette="slate"] {
+    --ct-fg: #E4E7EB;
+    --ct-fg-muted: #9AA4B0;
+    --ct-fg-subtle: #7C8593;
+    --ct-bg: #0F1216;
+    --ct-bg-subtle: #191D23;
+    --ct-rule: #333A43;
+    --ct-accent: #8FB8E0;
+    --ct-accent-hover: #B0D0F0;
+    --ct-accent-subtle: #14212E;
+    --ct-accent-rule: #294056;
+    --ct-accent-visited: #B7ABE0;
+  }
+}
+[data-palette="slate"][data-theme="light"] {
+  --ct-fg: #1A1D21;
+  --ct-fg-muted: #4B525B;
+  --ct-fg-subtle: #6B7480;
+  --ct-bg: #F5F7FA;
+  --ct-bg-subtle: #E9EDF2;
+  --ct-rule: #C2C9D2;
+  --ct-accent: #2F5E8A;
+  --ct-accent-hover: #234A6E;
+  --ct-accent-subtle: #E1EAF3;
+  --ct-accent-rule: #A6BFD6;
+  --ct-accent-visited: #4A4370;
+}
+[data-palette="slate"][data-theme="dark"] {
+  --ct-fg: #E4E7EB;
+  --ct-fg-muted: #9AA4B0;
+  --ct-fg-subtle: #7C8593;
+  --ct-bg: #0F1216;
+  --ct-bg-subtle: #191D23;
+  --ct-rule: #333A43;
+  --ct-accent: #8FB8E0;
+  --ct-accent-hover: #B0D0F0;
+  --ct-accent-subtle: #14212E;
+  --ct-accent-rule: #294056;
+  --ct-accent-visited: #B7ABE0;
+}
+
+/* Semantic uses — aliases resolved on .cascade, so they recompute from whatever base is active. */
+.cascade {
+  --ct-link: var(--ct-accent);
+  --ct-link-hover: var(--ct-accent-hover);
+  --ct-link-visited: var(--ct-accent-visited);
+  --ct-code-fg: var(--ct-fg);
+  --ct-code-bg: var(--ct-bg-subtle);
+  --ct-quote-rule: var(--ct-accent-rule);
+  --ct-quote-bg: transparent;
+  --ct-selection-bg: var(--ct-accent-subtle);
+}
+
+.cascade ::selection { background: var(--ct-selection-bg); color: var(--ct-fg); }

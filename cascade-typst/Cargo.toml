@@ -1,0 +1,10 @@
+[package]
+name = "cascade-typst"
+version = "0.1.0"
+edition = "2024"
+
+# A Renderer implementation for Typst (print / PDF). STUB: it builds and satisfies the protocol's
+# `Renderer` contract so the workspace stays green and the shape is fixed, but the real projection
+# and `typst compile` verification are TODO (see src/lib.rs). Depends only on the protocol.
+[dependencies]
+cascade = { path = "../cascade" }

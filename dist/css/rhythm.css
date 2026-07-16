@@ -1,0 +1,16 @@
+/* cascade-css — rhythm.css (generated from the spec) */
+.cascade {
+  --cr-unit: calc(var(--cs-base) * 0.375);
+
+  --cr-space-n1: calc(var(--cr-unit) * 0.5);
+  --cr-space-0: calc(var(--cr-unit) * 1);
+  --cr-space-p1: calc(var(--cr-unit) * 2);
+  --cr-space-p2: calc(var(--cr-unit) * 3);
+  --cr-space-p3: calc(var(--cr-unit) * 4);
+  --cr-space-p4: calc(var(--cr-unit) * 6);
+  --cr-space-p5: calc(var(--cr-unit) * 8);
+  --cr-space-p6: calc(var(--cr-unit) * 12);
+
+  /* one body line — formula::baseline(base, leading) */
+  --cr-baseline: calc(var(--cs-base) * var(--cf-lead-0));
+}

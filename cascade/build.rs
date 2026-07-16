@@ -1,25 +1,61 @@
-//! Compiles the spec (tokens.ron) INTO Rust types. Every closed set in the spec becomes
-//! an enum whose variants are the defined values, with data accessors — so consumers are
-//! handed values valid by construction. serde/ron are used here (build-time only) to READ
-//! the spec; the emitted types are plain Rust with no runtime deps.
+//! Build-time spec generator. Reads the spec RON (tokens.ron + theme.ron + themes/ + fonts/) from
+//! this crate's own directory (CARGO_MANIFEST_DIR) and writes the generated Rust types to OUT_DIR,
+//! which src/spec.rs `include!`s. Because cargo sets CARGO_MANIFEST_DIR and OUT_DIR correctly for
+//! EVERY build -- this crate built directly, or as a path/git/registry dependency in any workspace
+//! -- generation works anywhere cascade is depended on. (This replaces a crabtime proc-macro, which
+//! assumed it was the top-level project and could not run when cascade was a dependency.)
+
 use serde::Deserialize;
 use std::fmt::Write as _;
-use std::{env, fs, path::Path};
 
 #[derive(Deserialize)]
 struct Spec {
     scale_default: String,
+    default_fonts: DefaultFonts,
     scale_steps: MinMaxI,
     scale_presets: Vec<Preset>,
     optical: Optical,
     category_defaults: Vec<CatDefault>,
-    colors: Vec<ColorDef>,
     multipliers: Vec<Mult>,
+    roles: Vec<RoleDef>,
+}
+// theme.ron -- the colour layer's SCHEMA: the swatch->use bindings every palette shares, plus
+// which palette is default. The swatch VALUES live in themes/*.ron (one `Palette` each).
+#[derive(Deserialize)]
+struct Theme {
+    default: String,
+    semantic: Vec<SemDef>,
+    roles: Vec<RoleColorDef>,
+}
+// themes/<name>.ron -- one palette: the swatch values (light + dark) for the shared vocabulary.
+#[derive(Deserialize)]
+struct Palette {
+    palette: Vec<ColorDef>,
+}
+#[derive(Deserialize)]
+struct SemDef {
+    name: String,
+    base: String,
+}
+#[derive(Deserialize)]
+struct RoleColorDef {
+    role: String,
+    #[serde(default)]
+    fg: Option<String>,
+    #[serde(default)]
+    bg: Option<String>,
+    #[serde(default)]
+    border: Option<String>,
 }
 #[derive(Deserialize)]
 struct MinMaxI {
     min: i32,
     max: i32,
+}
+#[derive(Deserialize)]
+struct DefaultFonts {
+    body: String,
+    heading: String,
 }
 #[derive(Deserialize)]
 struct Preset {
@@ -60,6 +96,39 @@ struct Mult {
     value: f64,
 }
 #[derive(Deserialize)]
+struct RoleDef {
+    name: String,
+    elements: Vec<String>,
+    kind: RKind,
+    #[serde(default)]
+    step: Option<i32>,
+    #[serde(default)]
+    font: Option<FRole>,
+    #[serde(default)]
+    weight: Option<u32>,
+    #[serde(default)]
+    italic: bool,
+    #[serde(default)]
+    underline: bool,
+    #[serde(default)]
+    space_before: Option<String>,
+    #[serde(default)]
+    space_after: Option<String>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum RKind {
+    Block,
+    Inline,
+}
+#[derive(Deserialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+enum FRole {
+    Body,
+    Heading,
+    Code,
+}
+#[derive(Deserialize)]
 struct FontDef {
     name: String,
     category: Cat,
@@ -90,7 +159,7 @@ struct Meas {
     desc: String,
 }
 
-/// kebab / plain name → PascalCase Rust variant identifier.
+/// kebab / plain name -> PascalCase Rust variant identifier.
 fn pascal(s: &str) -> String {
     s.split('-')
         .map(|w| {
@@ -102,7 +171,6 @@ fn pascal(s: &str) -> String {
         })
         .collect()
 }
-
 fn q(s: &str) -> String {
     format!("{s:?}")
 }
@@ -150,30 +218,88 @@ fn close(out: &mut String) {
     let _ = writeln!(out, "}}\n");
 }
 
-fn main() {
-    println!("cargo:rerun-if-changed=tokens.ron");
-    println!("cargo:rerun-if-changed=fonts");
-    let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let s: Spec = ron::from_str(&fs::read_to_string(Path::new(&dir).join("tokens.ron")).unwrap())
-        .expect("parse tokens.ron");
+/// `None` / `Some(<f(v)>)` for an optional scalar accessor.
+fn opt<T: Copy>(o: Option<T>, f: impl Fn(T) -> String) -> String {
+    match o {
+        Some(v) => format!("Some({})", f(v)),
+        None => "None".into(),
+    }
+}
 
-    // One RON per typeface under fonts/ — drop in a file, it becomes a valid `Font`.
+fn main() {
+    // Regenerate when the spec RON changes or a font/theme is dropped in.
+    println!("cargo:rerun-if-changed=tokens.ron");
+    println!("cargo:rerun-if-changed=theme.ron");
+    println!("cargo:rerun-if-changed=themes");
+    println!("cargo:rerun-if-changed=fonts");
+
+    // The spec RON lives in this crate's own directory -- correct whether cascade is built directly
+    // or as a dependency, because cargo always sets CARGO_MANIFEST_DIR to the crate being built.
+    let dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR");
+    let dir = std::path::Path::new(&dir);
+    let s: Spec = ron::from_str(&std::fs::read_to_string(dir.join("tokens.ron")).unwrap())
+        .expect("parse tokens.ron");
+    let theme: Theme = ron::from_str(&std::fs::read_to_string(dir.join("theme.ron")).unwrap())
+        .expect("parse theme.ron");
+
+    // One RON per palette under themes/ -- drop in a file, it becomes a selectable `Theme`.
+    // Sorted by name for a deterministic enum. Each file's stem is the theme's id.
+    let mut themes: Vec<(String, Palette)> = std::fs::read_dir(dir.join("themes"))
+        .expect("read themes/")
+        .filter_map(|entry| {
+            let path = entry.unwrap().path();
+            (path.extension().and_then(|e| e.to_str()) == Some("ron")).then(|| {
+                let name = path.file_stem().unwrap().to_string_lossy().into_owned();
+                let pal: Palette = ron::from_str(&std::fs::read_to_string(&path).unwrap())
+                    .unwrap_or_else(|err| panic!("parse {}: {err}", path.display()));
+                (name, pal)
+            })
+        })
+        .collect();
+    themes.sort_by(|a, b| a.0.cmp(&b.0));
+    assert!(!themes.is_empty(), "no palettes in themes/ -- need at least one themes/<name>.ron");
+    assert!(
+        themes.iter().any(|(name, _)| name == &theme.default),
+        "theme.ron default '{}' is not a palette in themes/",
+        theme.default
+    );
+
+    // The default palette fixes the swatch vocabulary + `Color` variant order; every other palette
+    // must define exactly the same swatch names (so `Color` is well-defined for all `Theme`s).
+    let default_pal = &themes.iter().find(|(n, _)| n == &theme.default).unwrap().1;
+    let swatch_order: Vec<&str> = default_pal.palette.iter().map(|c| c.name.as_str()).collect();
+    let swatch_set: std::collections::HashSet<&str> = swatch_order.iter().copied().collect();
+    for (name, pal) in &themes {
+        let names: std::collections::HashSet<&str> = pal.palette.iter().map(|c| c.name.as_str()).collect();
+        assert!(
+            names == swatch_set,
+            "palette '{name}' swatches differ from default '{}': every themes/*.ron must define the same swatch names",
+            theme.default
+        );
+    }
+    // Per-theme lookup: swatch name -> (light, dark).
+    let swatch = |t: &Palette, name: &str, dark: bool| -> String {
+        let c = t.palette.iter().find(|c| c.name == name).unwrap();
+        q(if dark { &c.dark } else { &c.light })
+    };
+
+    // One RON per typeface under fonts/ -- drop in a file, it becomes a valid `Font`.
     // Sorted by name for a deterministic enum (directory order isn't guaranteed).
-    let mut fonts: Vec<FontDef> = fs::read_dir(Path::new(&dir).join("fonts"))
+    let mut fonts: Vec<FontDef> = std::fs::read_dir(dir.join("fonts"))
         .expect("read fonts/")
         .filter_map(|entry| {
             let path = entry.unwrap().path();
             (path.extension().and_then(|e| e.to_str()) == Some("ron")).then(|| {
-                ron::from_str(&fs::read_to_string(&path).unwrap())
+                ron::from_str(&std::fs::read_to_string(&path).unwrap())
                     .unwrap_or_else(|err| panic!("parse {}: {err}", path.display()))
             })
         })
         .collect();
     fonts.sort_by(|a: &FontDef, b: &FontDef| a.name.cmp(&b.name));
 
-    let mut o = String::from("// GENERATED from tokens.ron by build.rs — do not edit by hand.\n\n");
+    let mut o = String::from("// GENERATED by build.rs from tokens.ron/theme.ron/themes/fonts -- do not edit by hand.\n\n");
 
-    // ── Category (+ its default optical profile: the generic, no-font-selected baseline) ──
+    // -- Category (+ its default optical profile: the generic, no-font-selected baseline) --
     let cats: Vec<String> = vec!["Serif".into(), "Sans".into(), "Mono".into()];
     let order = ["serif", "sans", "mono"];
     let by_cat = |want: &str| {
@@ -192,7 +318,7 @@ fn main() {
     method(&mut o, "default_word_space", "f64", &cats, &cd(|d| f(d.word_space)));
     close(&mut o);
 
-    // ── Font ──
+    // -- Font --
     let fv: Vec<String> = fonts.iter().map(|x| pascal(&x.name)).collect();
     enum_head(&mut o, "Font", &fv);
     let m = |g: fn(&FontDef) -> String| fonts.iter().map(g).collect::<Vec<_>>();
@@ -210,7 +336,7 @@ fn main() {
     method(&mut o, "desc", "&'static str", &fv, &m(|x| q(&x.measured.desc)));
     close(&mut o);
 
-    // ── ScalePreset ──
+    // -- ScalePreset --
     let pv: Vec<String> = s.scale_presets.iter().map(|x| pascal(&x.name)).collect();
     enum_head(&mut o, "ScalePreset", &pv);
     method(&mut o, "id", "&'static str", &pv, &s.scale_presets.iter().map(|x| q(&x.name)).collect::<Vec<_>>());
@@ -218,23 +344,137 @@ fn main() {
     method(&mut o, "n", "u32", &pv, &s.scale_presets.iter().map(|x| x.n.to_string()).collect::<Vec<_>>());
     close(&mut o);
 
-    // ── Color ──
-    let cv: Vec<String> = s.colors.iter().map(|x| pascal(&x.name)).collect();
+    // -- Color (the swatch VOCABULARY -- names only; the values are per-`Theme`) --
+    let cv: Vec<String> = swatch_order.iter().map(|n| pascal(n)).collect();
     enum_head(&mut o, "Color", &cv);
-    method(&mut o, "id", "&'static str", &cv, &s.colors.iter().map(|x| q(&x.name)).collect::<Vec<_>>());
-    method(&mut o, "light", "&'static str", &cv, &s.colors.iter().map(|x| q(&x.light)).collect::<Vec<_>>());
-    method(&mut o, "dark", "&'static str", &cv, &s.colors.iter().map(|x| q(&x.dark)).collect::<Vec<_>>());
+    method(&mut o, "id", "&'static str", &cv, &swatch_order.iter().map(|n| q(n)).collect::<Vec<_>>());
     close(&mut o);
 
-    // ── Multiplier ──
+    // -- Theme (a palette). `light`/`dark` resolve a `Color`'s value FOR THIS palette; both ship,
+    // so the renderer emits every mode and the browser picks live within the selected theme. --
+    let tv: Vec<String> = themes.iter().map(|(n, _)| pascal(n)).collect();
+    enum_head(&mut o, "Theme", &tv);
+    method(&mut o, "id", "&'static str", &tv, &themes.iter().map(|(n, _)| q(n)).collect::<Vec<_>>());
+    for (fname, want_dark) in [("light", false), ("dark", true)] {
+        let _ = writeln!(o, "    pub fn {fname}(self, c: Color) -> &'static str {{\n        match self {{");
+        for (tname, pal) in &themes {
+            let _ = writeln!(o, "            Self::{} => match c {{", pascal(tname));
+            for sw in &swatch_order {
+                let _ = writeln!(o, "                Color::{} => {},", pascal(sw), swatch(pal, sw, want_dark));
+            }
+            let _ = writeln!(o, "            }},");
+        }
+        let _ = writeln!(o, "        }}\n    }}");
+    }
+    close(&mut o);
+
+    // -- Semantic (named colour uses; each aliases a base swatch or the `transparent` literal) --
+    // Validate every alias target against the palette at build time -- an unknown swatch won't compile.
+    let palette_names: std::collections::HashSet<&str> = swatch_order.iter().copied().collect();
+    for sem in &theme.semantic {
+        assert!(
+            palette_names.contains(sem.base.as_str()) || sem.base == "transparent",
+            "theme semantic '{}' aliases unknown colour '{}'",
+            sem.name, sem.base
+        );
+    }
+    let sv: Vec<String> = theme.semantic.iter().map(|x| pascal(&x.name)).collect();
+    enum_head(&mut o, "Semantic", &sv);
+    method(&mut o, "id", "&'static str", &sv, &theme.semantic.iter().map(|x| q(&x.name)).collect::<Vec<_>>());
+    method(&mut o, "base", "&'static str", &sv, &theme.semantic.iter().map(|x| q(&x.base)).collect::<Vec<_>>());
+    close(&mut o);
+
+    // -- role_color: the role -> colour binding (THE composition point). Keyed by the structural
+    // Role, but NOT a method on it -- Role stays colour-free. Validated at build time. --
+    let role_names: std::collections::HashSet<&str> = s.roles.iter().map(|r| r.name.as_str()).collect();
+    let semantic_names: std::collections::HashSet<&str> =
+        theme.semantic.iter().map(|x| x.name.as_str()).collect();
+    let color_ref = |slot: &Option<String>, role: &str| match slot {
+        None => "None".to_string(),
+        Some(name) => {
+            assert!(
+                palette_names.contains(name.as_str())
+                    || semantic_names.contains(name.as_str())
+                    || name == "transparent",
+                "role_color '{role}' references unknown colour '{name}'"
+            );
+            format!("Some({})", q(name))
+        }
+    };
+    let _ = writeln!(
+        o,
+        "#[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub struct RoleColor {{ pub fg: Option<&'static str>, pub bg: Option<&'static str>, pub border: Option<&'static str> }}\n"
+    );
+    let _ = writeln!(o, "/// The theme's colour binding for a role -- `None` slots inherit. Renderer combines this");
+    let _ = writeln!(o, "/// with the structural [`Role`]; the palette/semantic names resolve to the target's colour form.");
+    let _ = writeln!(o, "pub fn role_color(role: Role) -> RoleColor {{\n    match role {{");
+    for rc in &theme.roles {
+        assert!(role_names.contains(rc.role.as_str()), "role_color binds unknown role '{}'", rc.role);
+        let _ = writeln!(
+            o,
+            "        Role::{} => RoleColor {{ fg: {}, bg: {}, border: {} }},",
+            pascal(&rc.role),
+            color_ref(&rc.fg, &rc.role),
+            color_ref(&rc.bg, &rc.role),
+            color_ref(&rc.border, &rc.role),
+        );
+    }
+    let _ = writeln!(o, "        _ => RoleColor {{ fg: None, bg: None, border: None }},\n    }}\n}}\n");
+
+    // -- Multiplier --
     let mv: Vec<String> = s.multipliers.iter().map(|x| pascal(&x.name)).collect();
     enum_head(&mut o, "Multiplier", &mv);
     method(&mut o, "id", "&'static str", &mv, &s.multipliers.iter().map(|x| q(&x.name)).collect::<Vec<_>>());
     method(&mut o, "factor", "f64", &mv, &s.multipliers.iter().map(|x| f(x.value)).collect::<Vec<_>>());
     close(&mut o);
 
-    // ── scalar globals (renderer-agnostic only) ──
+    // -- RoleKind + FontRole (the fixed vocabularies a role references) --
+    let rk = vec!["Block".to_string(), "Inline".to_string()];
+    enum_head(&mut o, "RoleKind", &rk);
+    method(&mut o, "as_str", "&'static str", &rk, &[q("block"), q("inline")]);
+    close(&mut o);
+    let fr = vec!["Body".to_string(), "Heading".to_string(), "Code".to_string()];
+    enum_head(&mut o, "FontRole", &fr);
+    method(&mut o, "as_str", "&'static str", &fr, &[q("body"), q("heading"), q("code")]);
+    close(&mut o);
+
+    // -- Role (the document model) --
+    let frole = |v: FRole| {
+        format!("FontRole::{}", match v {
+            FRole::Body => "Body",
+            FRole::Heading => "Heading",
+            FRole::Code => "Code",
+        })
+    };
+    let rv: Vec<String> = s.roles.iter().map(|x| pascal(&x.name)).collect();
+    enum_head(&mut o, "Role", &rv);
+    let rm = |g: fn(&RoleDef) -> String| s.roles.iter().map(g).collect::<Vec<_>>();
+    method(&mut o, "id", "&'static str", &rv, &rm(|x| q(&x.name)));
+    method(&mut o, "elements", "&'static [&'static str]", &rv, &s.roles.iter()
+        .map(|x| format!("&[{}]", x.elements.iter().map(|e| q(e)).collect::<Vec<_>>().join(", ")))
+        .collect::<Vec<_>>());
+    method(&mut o, "kind", "RoleKind", &rv, &rm(|x| format!("RoleKind::{}", match x.kind {
+        RKind::Block => "Block",
+        RKind::Inline => "Inline",
+    })));
+    method(&mut o, "step", "Option<i32>", &rv, &rm(|x| opt(x.step, |v| v.to_string())));
+    method(&mut o, "font", "Option<FontRole>", &rv, &s.roles.iter()
+        .map(|x| opt(x.font, frole)).collect::<Vec<_>>());
+    method(&mut o, "weight", "Option<u32>", &rv, &rm(|x| opt(x.weight, |v| v.to_string())));
+    method(&mut o, "italic", "bool", &rv, &rm(|x| x.italic.to_string()));
+    method(&mut o, "underline", "bool", &rv, &rm(|x| x.underline.to_string()));
+    method(&mut o, "space_before", "Option<&'static str>", &rv, &rm(|x| opt(x.space_before.as_deref(), q)));
+    method(&mut o, "space_after", "Option<&'static str>", &rv, &rm(|x| opt(x.space_after.as_deref(), q)));
+    close(&mut o);
+
+    // -- scalar globals (renderer-agnostic only) --
+    for (role, name) in [("body", &s.default_fonts.body), ("heading", &s.default_fonts.heading)] {
+        assert!(fonts.iter().any(|f| &f.name == name), "default_fonts.{role} '{name}' is not a font in fonts/");
+    }
+    let _ = writeln!(o, "pub const FONT_BODY: Font = Font::{};", pascal(&s.default_fonts.body));
+    let _ = writeln!(o, "pub const FONT_HEADING: Font = Font::{};", pascal(&s.default_fonts.heading));
     let _ = writeln!(o, "pub const SCALE_DEFAULT: ScalePreset = ScalePreset::{};", pascal(&s.scale_default));
+    let _ = writeln!(o, "pub const THEME_DEFAULT: Theme = Theme::{};", pascal(&theme.default));
     let _ = writeln!(o, "pub const STEPS_MIN: i32 = {};", s.scale_steps.min);
     let _ = writeln!(o, "pub const STEPS_MAX: i32 = {};", s.scale_steps.max);
     let _ = writeln!(o, "pub const WORD_SPACE_K: f64 = {};", f(s.optical.word_space_k));
@@ -242,6 +482,6 @@ fn main() {
     let _ = writeln!(o, "pub const LEADING_CLAMP: (f64, f64) = ({}, {});", f(s.optical.leading_clamp.min), f(s.optical.leading_clamp.max));
     let _ = writeln!(o, "pub const MEASURE: u32 = {};", s.optical.measure);
 
-    let out_dir = env::var("OUT_DIR").unwrap();
-    fs::write(Path::new(&out_dir).join("spec.rs"), o).unwrap();
+    let out = std::env::var("OUT_DIR").expect("OUT_DIR");
+    std::fs::write(std::path::Path::new(&out).join("spec.rs"), o).expect("write generated spec.rs");
 }

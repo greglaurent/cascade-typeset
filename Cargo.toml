@@ -7,4 +7,4 @@
 # The website and examples are isolated consumers and live OUTSIDE this tree.
 [workspace]
 resolver = "2"
-members = ["cascade", "cascade-css"]
+members = ["cascade", "cascade-css", "cascade-typst", "cascade-cli"]

@@ -1,0 +1,13 @@
+/* cascade-css — cascade.css: the entrypoint. `@import "cascade.css"` (or bundle this
+ * file) to load the whole system. Opt into features with the documented hooks:
+ *   palettes  → [data-palette="<id>"]      (theme.css)
+ *   light/dark → [data-theme="light|dark"]  (theme.css)
+ *   typeface   → class .bundle-<name>        (typefaces.css)
+ *   notes      → class .sidenotes[.banded]   (sidenotes.css) */
+@import "theme.css";
+@import "scale.css";
+@import "rhythm.css";
+@import "typefaces.css";
+@import "optical.css";
+@import "layout.css";
+@import "sidenotes.css";

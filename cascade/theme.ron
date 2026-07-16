@@ -1,0 +1,43 @@
+// cascade — THE THEME SCHEMA. The colour layer's STRUCTURE, deliberately separate from the
+// typographic schema (tokens.ron) AND from the palettes (themes/*.ron). This file holds the
+// swatch→use bindings that every palette shares; the actual swatch VALUES live in themes/<name>.ron
+// (a `Theme` each). `default` selects the palette used when a build names none.
+//
+// Compiled into types by build.rs (see cascade/build.rs). References are validated at build
+// time — a role, use, or swatch name that no palette defines is a compile error.
+#![enable(implicit_some)]
+(
+    // The palette used when a build selects none (a themes/<name>.ron stem).
+    default: "paper",
+    // Semantic uses — each names a USE and aliases a base swatch (or a literal like `transparent`).
+    // The prototype's derived tokens (--ct-link, --ct-code-*), now data. A base swatch swap
+    // re-tints every use that aliases it.
+    semantic: [
+        (name: "link",         base: "accent"),
+        (name: "link-hover",   base: "accent-hover"),
+        (name: "link-visited", base: "accent-visited"),
+        (name: "code-fg",      base: "fg"),
+        (name: "code-bg",      base: "bg-subtle"),
+        (name: "quote-rule",   base: "accent-rule"),
+        (name: "quote-bg",     base: "transparent"),
+        (name: "selection-bg", base: "accent-subtle"),
+    ],
+    // Role → colour binding, keyed by role name (from tokens.ron). Optional slots fg / bg / border;
+    // omitted = inherit. Values name a base OR semantic colour. THE composition point: the renderer
+    // overlays this onto the structural role. Roles not listed inherit `fg`. Link states
+    // (hover/visited/focus) and ::selection are pseudo-class/element REPRESENTATION — the renderer
+    // applies them from the semantic colours above, so they need no binding here.
+    roles: [
+        (role: "root",       fg: "fg", bg: "bg"),
+        (role: "text-1",     fg: "fg-muted"),
+        (role: "caption",    fg: "fg-muted"),
+        (role: "footnotes",  fg: "fg-subtle", border: "rule"),
+        (role: "sidenote",   fg: "fg-subtle"),
+        (role: "marginnote", fg: "fg-subtle"),
+        (role: "link",       fg: "link"),
+        (role: "code",       fg: "code-fg", bg: "code-bg"),
+        (role: "code-block", fg: "code-fg", bg: "code-bg"),
+        (role: "quote",      bg: "quote-bg", border: "quote-rule"),
+        (role: "divider",    border: "rule"),
+    ],
+)

@@ -1,10 +1,47 @@
-/* cascade-css — theme.css (generated from the spec) */
+/* cascade-css — theme.css (generated from the spec)
+ *
+ * Two INDEPENDENT, runtime axes — this is CSS, so both resolve in the browser:
+ *   • palette  — [data-palette="<id>"]; the build's --theme is only the :root DEFAULT ({{ default_id }}).
+ *   • mode     — light | dark; system via @media, or forced with [data-theme="light"|"dark"].
+ * They compose: e.g. [data-palette="slate"][data-theme="dark"]. Semantic uses (.cascade) alias
+ * swatches, so they recompute from whichever palette × mode is active.
+ */
+
+/* ── default palette ({{ default_id }}) at :root; mode is reactive ── */
 :root {
 {% for c in colors %}  --ct-{{ c.id }}: {{ c.light }};
 {% endfor %}}
-
 @media (prefers-color-scheme: dark) {
   :root {
 {% for c in colors %}    --ct-{{ c.id }}: {{ c.dark }};
 {% endfor %}  }
 }
+[data-theme="light"] {
+{% for c in colors %}  --ct-{{ c.id }}: {{ c.light }};
+{% endfor %}}
+[data-theme="dark"] {
+{% for c in colors %}  --ct-{{ c.id }}: {{ c.dark }};
+{% endfor %}}
+
+/* ── every palette, switchable at runtime via [data-palette], orthogonal to the mode axis ── */
+{% for p in palettes %}[data-palette="{{ p.id }}"] {
+{% for c in p.colors %}  --ct-{{ c.id }}: {{ c.light }};
+{% endfor %}}
+@media (prefers-color-scheme: dark) {
+  [data-palette="{{ p.id }}"] {
+{% for c in p.colors %}    --ct-{{ c.id }}: {{ c.dark }};
+{% endfor %}  }
+}
+[data-palette="{{ p.id }}"][data-theme="light"] {
+{% for c in p.colors %}  --ct-{{ c.id }}: {{ c.light }};
+{% endfor %}}
+[data-palette="{{ p.id }}"][data-theme="dark"] {
+{% for c in p.colors %}  --ct-{{ c.id }}: {{ c.dark }};
+{% endfor %}}
+{% endfor %}
+/* Semantic uses — aliases resolved on .cascade, so they recompute from whatever base is active. */
+.cascade {
+{% for s in semantics %}  --ct-{{ s.id }}: {{ s.value }};
+{% endfor %}}
+
+.cascade ::selection { background: var(--ct-selection-bg); color: var(--ct-fg); }

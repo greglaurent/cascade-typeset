@@ -1,0 +1,20 @@
+// cascade — theme PALETTE: "paper". Warm paper + ink, brick-red accent. One RON per palette
+// under themes/ (like fonts/) — drop a file in, it becomes a selectable `Theme`. Each provides
+// the SAME swatch vocabulary (the `Color` names); only the values differ. Both light + dark are
+// curated (dark is hand-tuned, not an HSL flip) and ship together — light/dark stays a RUNTIME
+// toggle within the chosen palette. The swatch→use bindings (semantic, roles) live in theme.ron.
+(
+    palette: [
+        (name: "fg",             light: "#171717", dark: "#E8E4DC"),
+        (name: "fg-muted",       light: "#59544C", dark: "#A8A196"),
+        (name: "fg-subtle",      light: "#7A746A", dark: "#8A8378"),
+        (name: "bg",             light: "#F6F2E9", dark: "#14120E"),
+        (name: "bg-subtle",      light: "#EFE9DC", dark: "#1E1B16"),
+        (name: "rule",           light: "#C4BDB0", dark: "#3A362F"),
+        (name: "accent",         light: "#7A2E28", dark: "#E09A93"),
+        (name: "accent-hover",   light: "#5E211C", dark: "#EFB8B1"),
+        (name: "accent-subtle",  light: "#F0E2DE", dark: "#2E1614"),
+        (name: "accent-rule",    light: "#C9A5A0", dark: "#4A2A26"),
+        (name: "accent-visited", light: "#5A3A52", dark: "#C9A5C4"),
+    ],
+)
