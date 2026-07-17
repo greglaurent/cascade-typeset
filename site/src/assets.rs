@@ -1,7 +1,8 @@
 //! Resolve content-hashed asset URLs from Vite's build manifest, so templates reference the
 //! current hashed filenames (automatic cache-busting). Unlike wine-app this is SOFT: if the
 //! frontend hasn't been built yet, the server still runs and serves the page (styled by the
-//! dogfooded cascade CSS), just without the datastar bundle until `just build-web`.
+//! dogfooded cascade CSS), just without the datastar bundle until the frontend is built
+//! (`pnpm -C web build`).
 
 use std::collections::HashMap;
 
@@ -30,7 +31,7 @@ impl Assets {
             Ok(a) => a,
             Err(e) => {
                 tracing::warn!(
-                    "frontend not built ({e}) -- run `just build-web`; serving without datastar until then"
+                    "frontend not built ({e}) -- run `pnpm -C web build`; serving without datastar until then"
                 );
                 Assets::default()
             }

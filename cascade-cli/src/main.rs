@@ -1,18 +1,21 @@
 //! cascade — the command-line composition root.
 //!
-//! Three jobs, each a subcommand:
+//! The subcommands (this crate + cargo + build.rs are the whole toolchain — there is no task runner):
 //!   • `build`   — resolve the consumer's limited surface (a `cascade.ron` and/or flags) into a
 //!                 [`Config`], drive a renderer, and WRITE the output files. The only place output
 //!                 touches disk.
-//!   • `measure` — read a font file's OS/2 / head metrics and emit a `fonts/<name>.ron`. The spec
-//!                 compiles that RON into a new `Font` on the next build (drop-in + recompile).
+//!   • `dist`    — the release step: build the committed distribution (verified, VERSION-stamped,
+//!                 no manifest) into `dist/css`.
+//!   • `measure` — read a font's OS/2 / head metrics (via [`cascade::measure`]) and emit a
+//!                 `fonts/<name>.ron` the spec compiles into a `Font` (drop-in + recompile). Takes a
+//!                 single font or a directory (re-measure the whole shipped set in one call).
 //!   • `list`    — print the exposed surface: the scales and fonts a consumer may actually pick.
 //!
 //! The renderers stay pure (spec in, `Output`s out); this crate owns I/O and the outside world.
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use cascade::renderer::{Config, Renderer};
+use cascade::renderer::{Config, Face, FaceStyle, FontDelivery, FontFormat, Renderer, ResolvedFont};
 use cascade::{Category, Font, ScalePreset, Theme};
 use clap::{Args, Parser, Subcommand};
 
@@ -27,10 +30,34 @@ struct Cli {
 enum Cmd {
     /// Render the spec to a target's output files.
     Build(Build),
-    /// Measure a font file → a fonts/<name>.ron the spec compiles in.
+    /// Build the SHIPPED distribution (verified, VERSION-stamped, no manifest). Cascade's release step.
+    Dist(Dist),
+    /// Measure a font file (or a directory of them) → fonts/<name>.ron the spec compiles in.
     Measure(Measure),
+    /// Fetch an EXTERNAL family from Google Fonts (its files + license + a measured RON) so `build
+    /// --font-path` can use it. Standalone: adds to disk, doesn't build.
+    Add(Add),
     /// List the surface a consumer may change (scales, fonts, targets).
     List,
+}
+
+#[derive(Args)]
+struct Dist {
+    /// Output directory for the committed distribution (created if missing).
+    #[arg(long, default_value = "dist/css")]
+    out: PathBuf,
+}
+
+#[derive(Args)]
+struct Add {
+    /// Family to fetch from Google Fonts, e.g. "Source Serif 4".
+    family: String,
+    /// Directory to add the family into (a `<slug>/` subdir is created). Point `build --font-path` here.
+    #[arg(long, default_value = "fonts")]
+    out: PathBuf,
+    /// google/fonts git ref (branch, tag, or commit) — pin a commit for reproducibility.
+    #[arg(long = "ref", default_value = "main")]
+    git_ref: String,
 }
 
 #[derive(Args)]
@@ -53,6 +80,17 @@ struct Build {
     /// Heading typeface family (overrides --config).
     #[arg(long)]
     heading: Option<String>,
+    /// Provision EXTERNAL fonts (repeatable): a font file (.ttf/.otf, measured on the fly), a measured
+    /// .ron, or a directory of either. Each becomes selectable by family name via --body/--heading,
+    /// like a bundled font. A font file beside a .ron is embedded for delivery. Adds to --config
+    /// `font_paths`. (On-the-fly fonts default to the sans category; `cascade measure --category`
+    /// first for serif/mono precision.)
+    #[arg(long)]
+    font_path: Vec<PathBuf>,
+    /// Deliver external fonts as SEPARATE files (`<out>/fonts/<name>.<ext>`) referenced by url(),
+    /// instead of base64-embedding them in the CSS — lighter output for large fonts.
+    #[arg(long)]
+    link_fonts: bool,
     /// Default colour palette id (overrides --config). CSS ships all palettes and switches at
     /// runtime via [data-palette]; this picks the :root default. Print bakes it. (`cascade list`)
     #[arg(long)]
@@ -65,7 +103,7 @@ struct Build {
 
 #[derive(Args)]
 struct Measure {
-    /// Font file to measure (.ttf / .otf).
+    /// A font file (.ttf / .otf — both read identically) OR a directory of them (measures each).
     font: PathBuf,
     /// Name for the emitted Font (default: the font's family name, else the filename).
     #[arg(long)]
@@ -116,6 +154,10 @@ struct FileConfig {
     heading: Option<String>,
     #[serde(default)]
     theme: Option<String>,
+    /// External font provisioning: paths to measured font RONs (or directories of them). The
+    /// file-based twin of `--font-path`; the two are merged.
+    #[serde(default)]
+    font_paths: Vec<String>,
 }
 
 /// Read a consumer config, picking the parser from the file extension. TOML and JSON are the
@@ -144,7 +186,9 @@ fn main() {
 fn run() -> Res {
     match Cli::parse().cmd {
         Cmd::Build(b) => build(b),
+        Cmd::Dist(d) => dist(d),
         Cmd::Measure(m) => measure(m),
+        Cmd::Add(a) => add(a),
         Cmd::List => list(),
     }
 }
@@ -155,7 +199,24 @@ fn build(b: Build) -> Res {
         Some(p) => load_file_config(p)?,
         None => FileConfig::default(),
     };
-    let cfg = resolve(file, b.scale, b.body, b.heading, b.theme)?;
+    // Provision external fonts from config `font_paths` + `--font-path` flags (merged), then resolve
+    // --body/--heading names against the bundled catalog AND these.
+    let paths: Vec<PathBuf> =
+        file.font_paths.iter().map(PathBuf::from).chain(b.font_path.iter().cloned()).collect();
+    let mut external = load_external(&paths)?;
+    // --link-fonts: deliver as a separate file (url) instead of a base64 blob. Remap each embeddable
+    // external font's delivery to Link with a relative href the renderer references and we write below.
+    if b.link_fonts {
+        for f in &mut external {
+            let slug = slugify(&f.family);
+            if let FontDelivery::Faces(faces) = &mut f.delivery {
+                for face in faces.iter_mut() {
+                    face.href = Some(format!("fonts/{}.{}", face_stem(&slug, face.style), face.format.ext()));
+                }
+            }
+        }
+    }
+    let cfg = resolve(file, b.scale, b.body, b.heading, b.theme, &external)?;
     let renderer = renderer_for(&b.target)?;
 
     let outputs = renderer.render(&cfg);
@@ -184,7 +245,18 @@ fn build(b: Build) -> Res {
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
-    let fresh: HashSet<&str> = outputs.iter().map(|o| o.path.as_str()).collect();
+    // Linked external font files (delivery: Link) are emitted alongside the CSS and tracked too.
+    let linked: Vec<(&str, &[u8])> = [&cfg.body, &cfg.heading]
+        .into_iter()
+        .filter_map(|f| match &f.delivery {
+            FontDelivery::Faces(faces) => Some(faces),
+            _ => None,
+        })
+        .flatten()
+        .filter_map(|face| face.href.as_deref().map(|h| (h, face.bytes.as_slice())))
+        .collect();
+    let fresh: HashSet<&str> =
+        outputs.iter().map(|o| o.path.as_str()).chain(linked.iter().map(|(h, _)| *h)).collect();
 
     let (mut cleaned, mut kept) = (Vec::new(), Vec::new());
     for entry in &previous.files {
@@ -212,6 +284,20 @@ fn build(b: Build) -> Res {
         std::fs::write(&path, &o.body)?;
         manifest.files.push(FileStamp { path: o.path.clone(), checksum: checksum(o.body.as_bytes()) });
     }
+    // Linked font files (deduped: body == heading shares one href) — written beside the CSS and
+    // tracked in the manifest so a later build cleans them when they go stale, like any output.
+    let mut written = HashSet::new();
+    for (href, bytes) in &linked {
+        if !written.insert(*href) {
+            continue;
+        }
+        let path = b.out.join(href);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&path, bytes)?;
+        manifest.files.push(FileStamp { path: (*href).to_string(), checksum: checksum(bytes) });
+    }
     std::fs::write(&manifest_path, serde_json::to_string_pretty(&manifest)?)?;
 
     if !cleaned.is_empty() {
@@ -226,10 +312,33 @@ fn build(b: Build) -> Res {
         b.out.display(),
         renderer.name(),
         cfg.scale.id(),
-        cfg.body.family(),
-        cfg.heading.family(),
+        cfg.body.family,
+        cfg.heading.family,
         cfg.theme.id(),
     );
+    Ok(())
+}
+
+// ── dist ───────────────────────────────────────────────────────────────────────────────────
+// The release step (was the top-level justfile's `dist`): build the committed CSS distribution to
+// dist/css, VERIFIED, then stamp the spec's VERSION and drop the build manifest (an internal clean
+// aid, not part of a shipped artifact). One command, no shelling out, version straight from the crate.
+fn dist(d: Dist) -> Res {
+    build(Build {
+        out: d.out.clone(),
+        target: "css".into(),
+        config: None,
+        scale: None,
+        body: None,
+        heading: None,
+        font_path: vec![],
+        link_fonts: false,
+        theme: None,
+        verify: true,
+    })?;
+    let _ = std::fs::remove_file(d.out.join(MANIFEST)); // shipped artifact: no internal manifest
+    std::fs::write(d.out.join("VERSION"), format!("cascade {}\n", cascade::VERSION))?;
+    println!("built distribution {} (cascade {})", d.out.display(), cascade::VERSION);
     Ok(())
 }
 
@@ -241,16 +350,17 @@ fn resolve(
     body: Option<String>,
     heading: Option<String>,
     theme: Option<String>,
+    external: &[ResolvedFont],
 ) -> Result<Config, String> {
     let mut cfg = Config::default();
     for s in file.scale.iter().chain(scale.iter()) {
         cfg.scale = parse_scale(s)?;
     }
     for f in file.body.iter().chain(body.iter()) {
-        cfg.body = parse_font(f)?;
+        cfg.body = resolve_font(f, external)?;
     }
     for f in file.heading.iter().chain(heading.iter()) {
-        cfg.heading = parse_font(f)?;
+        cfg.heading = resolve_font(f, external)?;
     }
     for t in file.theme.iter().chain(theme.iter()) {
         cfg.theme = parse_theme(t)?;
@@ -258,17 +368,100 @@ fn resolve(
     Ok(cfg)
 }
 
+/// Load external fonts under the given paths (files, or directories of them), grouping a family's
+/// weight/style files into ONE font: metrics from the Regular face, delivery from the WHOLE set.
+/// Inputs mix freely — font files (`.ttf`/`.otf`) are read and grouped by their family name; a
+/// measured `.ron` supplies tuned metrics + category for the family of the same name (else the family
+/// is measured on the fly, category defaulting to sans). A `.ron` with no font files is metrics-only.
+fn load_external(paths: &[PathBuf]) -> Result<Vec<ResolvedFont>, String> {
+    let is_ron = |q: &Path| q.extension().and_then(|x| x.to_str()) == Some("ron");
+    let font_fmt = |q: &Path| q.extension().and_then(|x| x.to_str()).and_then(FontFormat::from_ext);
+
+    // Gather every entry across the paths.
+    let mut all: Vec<PathBuf> = Vec::new();
+    for p in paths {
+        if p.is_dir() {
+            let mut v: Vec<PathBuf> = std::fs::read_dir(p)
+                .map_err(|e| format!("read {}: {e}", p.display()))?
+                .filter_map(|e| e.ok().map(|e| e.path()))
+                .collect();
+            v.sort();
+            all.extend(v);
+        } else {
+            all.push(p.clone());
+        }
+    }
+
+    // Group font files by family name (name id 16 → Bold/Italic land under the family); load RONs.
+    // Per family: (display name, the collected faces as (style, format, bytes)).
+    type Group = (String, Vec<(FaceStyle, FontFormat, Vec<u8>)>);
+    let mut groups: std::collections::BTreeMap<String, Group> = std::collections::BTreeMap::new();
+    let mut rons: std::collections::BTreeMap<String, ResolvedFont> = std::collections::BTreeMap::new();
+    for q in &all {
+        if is_ron(q) {
+            let text = std::fs::read_to_string(q).map_err(|e| format!("read {}: {e}", q.display()))?;
+            let rf = cascade::measure::load_ron(&text).map_err(|e| format!("{}: {e}", q.display()))?;
+            rons.insert(rf.family.to_lowercase(), rf);
+        } else if let Some(format) = font_fmt(q) {
+            let bytes = std::fs::read(q).map_err(|e| format!("read {}: {e}", q.display()))?;
+            let info = cascade::measure::face_info(&bytes);
+            let family = info
+                .family
+                .or_else(|| q.file_stem().map(|s| s.to_string_lossy().into_owned()))
+                .ok_or_else(|| format!("{}: could not determine a family name", q.display()))?;
+            groups
+                .entry(family.to_lowercase())
+                .or_insert_with(|| (family, Vec::new()))
+                .1
+                .push((info.style, format, bytes));
+        }
+    }
+
+    let mut fonts = Vec::new();
+    // Each font-file family → one ResolvedFont: metrics from a matching RON (kept) or the measured
+    // Regular; delivery = every face in the set (one @font-face each, correctly weighted).
+    for (key, (family, files)) in groups {
+        let reg = files.iter().min_by_key(|(style, _, _)| regular_score(*style)).unwrap();
+        let mut rf = match rons.remove(&key) {
+            Some(rf) => rf, // tuned metrics + category from the RON
+            None => cascade::measure::resolve_face(&reg.2, Some(&family), Category::Sans)
+                .map_err(|e| format!("{family}: {e}"))?,
+        };
+        rf.delivery = FontDelivery::Faces(
+            files.into_iter().map(|(style, format, bytes)| Face { format, bytes, style, href: None }).collect(),
+        );
+        fonts.push(rf);
+    }
+    // RONs with no font files → metrics only (System delivery, relies on the reader having the face).
+    fonts.extend(rons.into_values());
+    Ok(fonts)
+}
+
+/// How close a face is to the "Regular" used for a family's metrics: upright and nearest weight 400.
+fn regular_score(s: FaceStyle) -> u32 {
+    let (lo, hi) = s.weight;
+    (s.italic as u32) * 100_000 + (i32::from(400u16.clamp(lo, hi)) - 400).unsigned_abs()
+}
+
+/// Resolve a font family name to a `ResolvedFont`: the bundled catalog first, then the provisioned
+/// externals — both selected the SAME way, by family name. An unknown name lists what IS available.
+fn resolve_font(name: &str, external: &[ResolvedFont]) -> Result<ResolvedFont, String> {
+    if let Some(f) = Font::from_family(name) {
+        return Ok(f.into());
+    }
+    if let Some(f) = external.iter().find(|f| f.family.eq_ignore_ascii_case(name)) {
+        return Ok(f.clone());
+    }
+    let bundled = Font::ALL.iter().map(|f| f.family()).collect::<Vec<_>>().join(", ");
+    let ext: Vec<&str> = external.iter().map(|f| f.family.as_str()).collect();
+    let ext = if ext.is_empty() { "none provisioned (use --font-path)".to_string() } else { ext.join(", ") };
+    Err(format!("unknown font '{name}'. bundled: {bundled}; external: {ext}"))
+}
+
 fn parse_scale(s: &str) -> Result<ScalePreset, String> {
     ScalePreset::from_id(s).ok_or_else(|| {
         let all = ScalePreset::ALL.iter().map(|p| p.id()).collect::<Vec<_>>().join(", ");
         format!("unknown scale '{s}'. available: {all}")
-    })
-}
-
-fn parse_font(s: &str) -> Result<Font, String> {
-    Font::from_family(s).ok_or_else(|| {
-        let all = Font::ALL.iter().map(|f| f.family()).collect::<Vec<_>>().join(", ");
-        format!("unknown font '{s}'. available: {all}")
     })
 }
 
@@ -289,69 +482,93 @@ fn renderer_for(target: &str) -> Result<Box<dyn Renderer>, String> {
 }
 
 // ── measure ────────────────────────────────────────────────────────────────────────────────
+// Thin IO wrapper: the measurement + RON format are STANDARDIZED in the spec (`cascade::measure`).
+// Accepts a single font OR a directory (measures every .ttf/.otf in it — re-measuring the whole set
+// of shipped fonts is one command, no task-runner recipe). Everything font-specific is the spec's.
 fn measure(m: Measure) -> Res {
-    let cat = Category::from_str(&m.category).ok_or_else(|| {
+    let fallback_cat = Category::from_str(&m.category).ok_or_else(|| {
         format!("unknown category '{}'. available: serif, sans, mono", m.category)
     })?;
-    let data = std::fs::read(&m.font).map_err(|e| format!("read {}: {e}", m.font.display()))?;
-    let face = ttf_parser::Face::parse(&data, 0).map_err(|e| format!("parse font: {e}"))?;
+    if m.font.is_dir() {
+        // TrueType and OpenType/CFF are read identically (ttf-parser auto-detects); accept either,
+        // case-insensitively.
+        let is_font = |p: &Path| {
+            p.extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| matches!(e.to_ascii_lowercase().as_str(), "ttf" | "otf"))
+        };
+        let mut fonts: Vec<PathBuf> = std::fs::read_dir(&m.font)?
+            .filter_map(|e| e.ok().map(|e| e.path()))
+            .filter(|p| is_font(p))
+            .collect();
+        fonts.sort();
+        if fonts.is_empty() {
+            return Err(format!("no .ttf/.otf fonts in {}", m.font.display()).into());
+        }
+        for font in &fonts {
+            measure_one(font, None, None, fallback_cat)?;
+        }
+    } else {
+        measure_one(&m.font, m.name.clone(), m.out.clone(), fallback_cat)?;
+    }
+    Ok(())
+}
 
-    let upem = face.units_per_em() as f64;
-    // x-height is the whole point of measuring: raw OS/2 sxHeight ÷ units_per_em. No sxHeight → we
-    // cannot normalize this font's optical, so refuse rather than invent a value.
-    let sx = face
-        .x_height()
-        .ok_or("font has no OS/2 x-height (sxHeight); cannot measure")? as f64;
-    // cap height: OS/2 sCapHeight if present, else the 'H' glyph's top.
-    let cap = face
-        .capital_height()
-        .map(|v| v as f64)
-        .or_else(|| face.glyph_index('H').and_then(|g| face.glyph_bounding_box(g)).map(|b| b.y_max as f64))
-        .ok_or("font has no cap height (sCapHeight, no 'H' glyph)")?;
-    let asc = face.typographic_ascender().unwrap_or_else(|| face.ascender()) as f64;
-    let desc = face.typographic_descender().unwrap_or_else(|| face.descender()) as f64;
+/// Measure ONE font → its `fonts/<name>.ron`. Re-measuring an existing font regenerates only the
+/// MEASURED block and PRESERVES its category + tuned profile from the current RON (so a re-measure is
+/// idempotent and needs no flags). A new font takes `fallback_cat` and a category-seeded profile.
+fn measure_one(
+    font: &Path,
+    name_override: Option<String>,
+    out_override: Option<PathBuf>,
+    fallback_cat: Category,
+) -> Res {
+    let data = std::fs::read(font).map_err(|e| format!("read {}: {e}", font.display()))?;
+    let measured = cascade::measure::measure_face(&data)?;
 
-    let name = m
-        .name
-        .or_else(|| family_name(&face))
-        .or_else(|| m.font.file_stem().map(|s| s.to_string_lossy().into_owned()))
+    let stem = font.file_stem().map(|s| s.to_string_lossy().into_owned());
+    // The RON path: prefer an explicit --name, then the source FILENAME (maintainer-controlled, so a
+    // re-measure maps deterministically), then the font's family. Sanitised to a valid stem — a raw
+    // family may carry punctuation (Jost ships `"Jost*"`) or a variable-font suffix (`"Inter Variable"`).
+    let slug_from = name_override
+        .clone()
+        .or_else(|| stem.clone())
+        .or_else(|| measured.family.clone())
         .ok_or("could not determine a font name; pass --name")?;
-    let slug = name.to_lowercase().replace(' ', "-");
+    let out =
+        out_override.unwrap_or_else(|| PathBuf::from(format!("cascade/fonts/{}.ron", slugify(&slug_from))));
 
-    // profile = the category's generic optical baseline; the author tunes from there.
-    let ron = format!(
-        "// cascade — font measure: {name} ({cat}). OS/2 metrics + optical profile.\n\
-         (\n    \
-         name: {name:?},\n    \
-         category: {cat},\n    \
-         profile:  (optical_size: {os:?}, k_tracking: {kt}, leading_base: {lb}, word_space: {ws}),\n    \
-         measured: (x_height: {xh:.3}, cap_height: {ch:.3}, units_per_em: {upem_i}, sx: \"sxHeight {sx_i}\", asc: {asc:?}, desc: {desc:?}),\n\
-         )\n",
-        cat = cat.as_str(),
-        os = cat.default_optical_size(),
-        kt = fnum(cat.default_k_tracking()),
-        lb = fnum(cat.default_leading_base()),
-        ws = fnum(cat.default_word_space()),
-        xh = sx / upem,
-        ch = cap / upem,
-        upem_i = upem as u32,
-        sx_i = sx as i64,
-        asc = format!("{:.3}", asc / upem),
-        desc = format!("{:.3}", desc / upem),
-    );
+    // Re-measure keeps the authored name + category + tuned profile from the current RON; a new font
+    // uses an explicit --name (or the family/filename) and the fallback category with a seeded profile.
+    let existing = std::fs::read_to_string(&out).ok();
+    let name = name_override
+        .or_else(|| existing.as_deref().and_then(cascade::measure::extract_name))
+        .or_else(|| measured.family.clone())
+        .or(stem)
+        .ok_or("could not determine a font name; pass --name")?;
+    let cat = existing
+        .as_deref()
+        .and_then(cascade::measure::extract_category)
+        .and_then(|c| Category::from_str(&c))
+        .unwrap_or(fallback_cat);
+    let existing_profile = existing.as_deref().and_then(cascade::measure::extract_profile);
+    let profile_kept = existing_profile.is_some();
+    let profile = existing_profile.unwrap_or_else(|| cascade::measure::default_profile(cat));
 
-    let out = m.out.unwrap_or_else(|| PathBuf::from(format!("cascade/fonts/{slug}.ron")));
+    let ron = cascade::measure::font_ron(&name, cat, &profile, &measured);
     if let Some(parent) = out.parent() {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(&out, &ron)?;
     println!(
-        "measured {} → {} (x-height {:.3}, cap {:.3}, upem {})",
+        "measured {} → {} (x-height {:.3}, cap {:.3}, avg-advance {:.4}, upem {}){}",
         name,
         out.display(),
-        sx / upem,
-        cap / upem,
-        upem as u32,
+        measured.x_height,
+        measured.cap_height,
+        measured.avg_advance,
+        measured.units_per_em,
+        if profile_kept { " — kept existing profile" } else { " — seeded profile from category" },
     );
     if out.starts_with("cascade/fonts") || out.components().any(|c| c.as_os_str() == "fonts") {
         println!("  the spec picks this up on the next build (drop-in + recompile).");
@@ -359,14 +576,114 @@ fn measure(m: Measure) -> Res {
     Ok(())
 }
 
-/// The font's own family name (name id 1), if present and decodable.
-fn family_name(face: &ttf_parser::Face) -> Option<String> {
-    face.names().into_iter().find(|n| n.name_id == 1).and_then(|n| n.to_string())
+/// A unique file stem for a face within a family: `<slug>-<weight>[i]` (`source-serif-700`,
+/// `source-serif-400i`, or `source-serif-100-900` for a variable range).
+fn face_stem(slug: &str, style: FaceStyle) -> String {
+    let (lo, hi) = style.weight;
+    let w = if lo == hi { lo.to_string() } else { format!("{lo}-{hi}") };
+    format!("{slug}-{w}{}", if style.italic { "i" } else { "" })
 }
 
-/// f64 → a RON-safe decimal literal (always a decimal point, so a whole number stays an f64).
-fn fnum(v: f64) -> String {
-    format!("{v:?}")
+/// A font name → a filesystem-safe RON stem: lowercased, spaces to hyphens, punctuation dropped
+/// (so `"Jost*"` → `jost`, `"Inter"` → `inter`).
+fn slugify(name: &str) -> String {
+    name.to_lowercase()
+        .replace(' ', "-")
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+        .collect()
+}
+
+// ── add ────────────────────────────────────────────────────────────────────────────────────
+// Fetch a family from the google/fonts repo — its font files + OFL license, plus a measured RON
+// whose CATEGORY comes from Google's METADATA.pb (no guessing) and whose name is canonical. The repo
+// ships TTFs (measurable, unlike the CDN's woff2). Standalone: writes to disk; `build --font-path
+// <out>/<slug>` then delivers the whole family.
+fn add(a: Add) -> Res {
+    let slug: String = a.family.to_lowercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+    // The repo groups families under a license dir; try each.
+    let (base, meta) = ["ofl", "apache", "ufl"]
+        .iter()
+        .find_map(|lic| {
+            let base = format!("https://raw.githubusercontent.com/google/fonts/{}/{}/{}", a.git_ref, lic, slug);
+            http_text(&format!("{base}/METADATA.pb")).ok().map(|m| (base, m))
+        })
+        .ok_or_else(|| format!("family '{}' not found in google/fonts (looked up slug '{slug}')", a.family))?;
+
+    let field = |key: &str| {
+        meta.lines().find_map(|l| l.trim().strip_prefix(key).map(|v| v.trim().trim_matches('"').to_string()))
+    };
+    let name = field("name:").unwrap_or_else(|| a.family.clone());
+    let category = match field("category:").as_deref() {
+        Some("SERIF") => "serif",
+        Some("MONOSPACE") => "mono",
+        _ => "sans", // SANS_SERIF / DISPLAY / HANDWRITING → sans
+    };
+    let cat = Category::from_str(category).unwrap();
+    let files: Vec<String> = meta
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("filename:").map(|v| v.trim().trim_matches('"').to_string()))
+        .collect();
+    if files.is_empty() {
+        return Err("METADATA.pb lists no font files".into());
+    }
+
+    let dir = a.out.join(&slug);
+    std::fs::create_dir_all(&dir)?;
+    if let Ok(ofl) = http_text(&format!("{base}/OFL.txt")) {
+        std::fs::write(dir.join("OFL.txt"), ofl)?;
+    }
+    // Download every file; keep the "regular-most" for the measured RON (a variable file covers all).
+    let mut regular: Option<Vec<u8>> = None;
+    for f in &files {
+        let bytes = http_bytes(&format!("{base}/{}", urlencode(f)))?;
+        std::fs::write(dir.join(f), &bytes)?;
+        if regular.is_none() && (f.contains('[') || f.to_lowercase().contains("regular")) {
+            regular = Some(bytes);
+        }
+    }
+    let regular =
+        regular.or_else(|| std::fs::read(dir.join(&files[0])).ok()).ok_or("no face to measure")?;
+
+    // Measure the regular → a RON carrying Google's category + canonical name, so build gets both right.
+    let measured = cascade::measure::measure_face(&regular)?;
+    let ron = cascade::measure::font_ron(&name, cat, &cascade::measure::default_profile(cat), &measured);
+    std::fs::write(dir.join(format!("{slug}.ron")), ron)?;
+
+    println!("added {name} ({category}) → {} — {} file(s) + OFL + {slug}.ron", dir.display(), files.len());
+    println!("  build with: cascade build --font-path {} --body {name:?}", dir.display());
+    Ok(())
+}
+
+/// GET a URL as text (METADATA.pb, OFL.txt).
+fn http_text(url: &str) -> Result<String, String> {
+    ureq::get(url).call().map_err(|e| e.to_string())?.into_string().map_err(|e| e.to_string())
+}
+
+/// GET a URL as bytes (a font file).
+fn http_bytes(url: &str) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+    let mut buf = Vec::new();
+    ureq::get(url)
+        .call()
+        .map_err(|e| e.to_string())?
+        .into_reader()
+        .read_to_end(&mut buf)
+        .map_err(|e| e.to_string())?;
+    Ok(buf)
+}
+
+/// Percent-encode the URL-unsafe characters google/fonts filenames carry (`[ ] , space`).
+fn urlencode(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            '[' => "%5B".to_string(),
+            ']' => "%5D".to_string(),
+            ',' => "%2C".to_string(),
+            ' ' => "%20".to_string(),
+            c => c.to_string(),
+        })
+        .collect()
 }
 
 // ── list ───────────────────────────────────────────────────────────────────────────────────
@@ -380,10 +697,10 @@ fn list() -> Res {
     println!("\nfonts (--body / --heading):");
     for f in Font::ALL {
         let mut tags = Vec::new();
-        if f == d.body {
+        if d.body.family == f.family() {
             tags.push("body-default");
         }
-        if f == d.heading {
+        if d.heading.family == f.family() {
             tags.push("heading-default");
         }
         let tag = if tags.is_empty() { String::new() } else { format!("  ({})", tags.join(", ")) };

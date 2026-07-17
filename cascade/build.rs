@@ -83,6 +83,7 @@ struct CatDefault {
     k_tracking: f64,
     leading_base: f64,
     word_space: f64,
+    avg_advance: f64,
 }
 #[derive(Deserialize)]
 struct ColorDef {
@@ -153,6 +154,7 @@ struct Prof {
 struct Meas {
     x_height: f64,
     cap_height: f64,
+    avg_advance: f64,
     units_per_em: u32,
     sx: String,
     asc: String,
@@ -316,6 +318,7 @@ fn main() {
     method(&mut o, "default_k_tracking", "f64", &cats, &cd(|d| f(d.k_tracking)));
     method(&mut o, "default_leading_base", "f64", &cats, &cd(|d| f(d.leading_base)));
     method(&mut o, "default_word_space", "f64", &cats, &cd(|d| f(d.word_space)));
+    method(&mut o, "default_avg_advance", "f64", &cats, &cd(|d| f(d.avg_advance)));
     close(&mut o);
 
     // -- Font --
@@ -326,6 +329,7 @@ fn main() {
     method(&mut o, "category", "Category", &fv, &m(|x| cat(x.category)));
     method(&mut o, "optical_size", "&'static str", &fv, &m(|x| q(&x.profile.optical_size)));
     method(&mut o, "x_height", "f64", &fv, &m(|x| f(x.measured.x_height)));
+    method(&mut o, "avg_advance", "f64", &fv, &m(|x| f(x.measured.avg_advance)));
     method(&mut o, "k_tracking", "f64", &fv, &m(|x| f(x.profile.k_tracking)));
     method(&mut o, "leading_base", "f64", &fv, &m(|x| f(x.profile.leading_base)));
     method(&mut o, "word_space", "f64", &fv, &m(|x| f(x.profile.word_space)));

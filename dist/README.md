@@ -2,7 +2,8 @@
 
 The **shipped, pre-built** cascade output -- the artifact a consumer includes, grouped by renderer
 format. These files are committed and are cascade's release deliverable; they are NOT generated at
-a consumer's build time. Regenerate with `just dist` (compiles once, here) and commit the result.
+a consumer's build time. Regenerate with `cargo run -p cascade-cli -- dist` (compiles once, here) and
+commit the result.
 
 | Directory | Format | Include |
 |---|---|---|

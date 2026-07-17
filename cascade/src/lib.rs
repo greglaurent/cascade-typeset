@@ -8,8 +8,17 @@
 mod spec;
 pub use spec::*;
 
+/// The spec's version — stamped onto a shipped distribution (`cascade dist`). Travels with the crate
+/// (compile-time `CARGO_PKG_VERSION`), so nothing has to parse Cargo.toml to learn it.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub mod formula;
 pub mod renderer;
+
+/// Font measurement — the standardized derivation of a font's optical metrics + the `fonts/*.ron`
+/// format. Feature-gated (`measure`) so the core spec stays dependency-free; the CLI enables it.
+#[cfg(feature = "measure")]
+pub mod measure;
 
 /// Look a value up by its spec name against the compiled closed set — the inverse of `id()` /
 /// `family()`. Used at the CLI boundary to turn a consumer's string (`cascade.ron`, a `--flag`)
@@ -50,7 +59,11 @@ mod tests {
         assert_eq!(Font::Lora.family(), "Lora");
         assert_eq!(Font::Lora.category(), Category::Serif);
         assert_eq!(Font::Inter.x_height(), 0.546);
-        assert_eq!(Font::ALL.len(), 3);
+        // avg_advance is a measured metric (the copyfitting factor): per-font, plus a category default.
+        assert_eq!(Font::Inter.avg_advance(), 0.4714);
+        assert_eq!(Category::Serif.default_avg_advance(), 0.46);
+        // The bundle ships Inter + Lora; other faces are the client's (external) domain.
+        assert_eq!(Font::ALL.len(), 2);
 
         assert_eq!(SCALE_DEFAULT, ScalePreset::GoldenDitonic);
         assert_eq!(FONT_BODY, Font::Inter);

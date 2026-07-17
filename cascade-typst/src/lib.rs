@@ -8,8 +8,7 @@
 //! never re-deriving them. Print has no runtime, so the choices CSS keeps reactive get BAKED here:
 //! the selected [`cascade::Theme`] palette, and light/dark. The notes feature becomes a Typst
 //! layout capability (`layout.make(sidenotes: true)`) rather than markup classes.
-use cascade::renderer::{Config, Output, Renderer};
-use cascade::Font;
+use cascade::renderer::{Config, Output, Renderer, ResolvedFont};
 
 /// The Typst renderer. See the module docs for the projection it owes.
 pub struct Typst;
@@ -21,8 +20,8 @@ impl Renderer for Typst {
 
     /// Typst's fallback contract is just the family name — Typst resolves its own fallbacks, unlike
     /// CSS's explicit stack. This part is the correct behaviour, not a stub.
-    fn font_family(&self, font: Font) -> String {
-        font.family().to_string()
+    fn font_family(&self, font: &ResolvedFont) -> String {
+        font.family.clone()
     }
 
     fn render(&self, _cfg: &Config) -> Vec<Output> {

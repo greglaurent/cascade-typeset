@@ -1,7 +1,0 @@
-// cascade — font measure: Jost (sans). OS/2 metrics + optical profile.
-(
-    name: "Jost",
-    category: sans,
-    profile:  (optical_size: "12pt", k_tracking: 0.03, leading_base: 1.45, word_space: 0.28),
-    measured: (x_height: 0.46, cap_height: 0.70, units_per_em: 1000, sx: "sxHeight 460", asc: "1.07", desc: "-0.375"),
-)

@@ -7,7 +7,7 @@
 //! The spec stays renderer-agnostic; this crate is "what it looks like in CSS."
 use askama::Template;
 use cascade::formula::{self, Val};
-use cascade::renderer::{Config, Output, Renderer};
+use cascade::renderer::{Config, FontDelivery, Output, Renderer, ResolvedFont};
 use cascade::{
     role_color, Category, Color, Font, FontRole, Multiplier, Role, ScalePreset, Semantic,
     LEADING_CLAMP, MEASURE, STEPS_MAX, STEPS_MIN, TRACKING_CLAMP, WORD_SPACE_K,
@@ -139,6 +139,21 @@ impl Val for Calc {
     }
 }
 
+/// Minimal standard base64 (padded) — for embedding font bytes in a `@font-face` `data:` URI. Avoids
+/// a dependency for the one place cascade-css needs it (external-font delivery).
+fn base64(data: &[u8]) -> String {
+    const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
+    for c in data.chunks(3) {
+        let n = (c[0] as u32) << 16 | (*c.get(1).unwrap_or(&0) as u32) << 8 | *c.get(2).unwrap_or(&0) as u32;
+        out.push(A[(n >> 18 & 63) as usize] as char);
+        out.push(A[(n >> 12 & 63) as usize] as char);
+        out.push(if c.len() > 1 { A[(n >> 6 & 63) as usize] as char } else { '=' });
+        out.push(if c.len() > 2 { A[(n & 63) as usize] as char } else { '=' });
+    }
+    out
+}
+
 /// A scale step's label: `0`, `n{k}` (negative), `p{k}` (positive). Shared by every var name.
 fn step_label(i: i32) -> String {
     if i == 0 {
@@ -185,6 +200,17 @@ impl Var {
     }
     fn measure() -> Var {
         Var("cf-measure".to_string())
+    }
+    /// The body font's frequency-weighted average character advance (em) — the copyfitting factor
+    /// that turns the character `measure` into a real width. Reactive: `bundle-*` redefines it, so
+    /// the measure re-resolves live when the body typeface changes.
+    fn avg_advance() -> Var {
+        Var("cf-aw".to_string())
+    }
+    /// The measure projected to a reading-column WIDTH (`measure × avg_advance em`, overflow-guarded),
+    /// single-sourced so every layout mode (centered, banded) binds the same value.
+    fn measure_inline() -> Var {
+        Var("cf-measure-inline".to_string())
     }
     // scale scalars
     fn base() -> Var {
@@ -327,6 +353,7 @@ struct FontRow {
     k_tracking: f64,
     leading_base: f64,
     word_space: f64,
+    avg_advance: f64,
 }
 
 #[derive(Template)]
@@ -351,6 +378,7 @@ struct FontCss {
     lmin: f64,
     lmax: f64,
     measure: u32,
+    aw: f64, // body font's mean character advance (em) — the copyfitting factor for the measure
     size_min: String,
     // Optical model, PROJECTED from the spec (`cascade::formula::*` over `Calc`) — not re-encoded
     // here. Each string is a `formula::*` result with CSS-var bindings, so a class swap re-resolves
@@ -375,6 +403,7 @@ struct ProfileClassRow {
     kt: f64,
     lb: f64,
     bws: f64,
+    aw: f64,
 }
 
 // sidenotes.css — the opt-in Tufte notes FEATURE. Presentation only: note typography comes from
@@ -387,6 +416,7 @@ struct SidenotesCss {
     baseline: String, // one body line (rhythm)
     marker: String,   // marker colour (theme link)
     rule: String,     // disclosure border colour (theme rule)
+    measure: String,  // the single-sourced reading measure (banded caps its text column at it)
 }
 
 impl Renderer for Css {
@@ -397,8 +427,8 @@ impl Renderer for Css {
     /// The fallback contract: the plain font name (what a user expects and can override with
     /// whatever they have installed) + this renderer's generic category stack. The sane-default
     /// x-height normalization is applied to that same name by faces.css's `@font-face`.
-    fn font_family(&self, font: Font) -> String {
-        format!("\"{}\", {}", font.family(), Self::fallbacks(font.category()))
+    fn font_family(&self, font: &ResolvedFont) -> String {
+        format!("\"{}\", {}", font.family, Self::fallbacks(font.category))
     }
 
     fn render(&self, cfg: &Config) -> Vec<Output> {
@@ -491,11 +521,12 @@ impl Renderer for Css {
             .into_iter()
             .map(|f| FontRow {
                 slug: f.family().to_lowercase(),
-                family: self.font_family(f),
+                family: self.font_family(&f.into()),
                 x_height: f.x_height(),
                 k_tracking: f.k_tracking(),
                 leading_base: f.leading_base(),
                 word_space: f.word_space(),
+                avg_advance: f.avg_advance(),
             })
             .collect();
         let fonts_css = FontsCss { fonts }.render().expect("render typefaces.css");
@@ -578,28 +609,30 @@ impl Renderer for Css {
                 kt: c.default_k_tracking(),
                 lb: c.default_leading_base(),
                 bws: c.default_word_space(),
+                aw: c.default_avg_advance(),
             })
             .collect();
         let font = FontCss {
-            body_family: self.font_family(cfg.body),
-            heading_family: self.font_family(cfg.heading),
+            body_family: self.font_family(&cfg.body),
+            heading_family: self.font_family(&cfg.heading),
             code_family: format!("\"{}\", {}", DEFAULT_MONO_FAMILY, Self::fallbacks(Category::Mono)),
             font_serif: Self::fallbacks(Category::Serif).to_string(),
             font_sans: Self::fallbacks(Category::Sans).to_string(),
             font_mono: format!("\"{}\", {}", DEFAULT_MONO_FAMILY, Self::fallbacks(Category::Mono)),
-            xh: cfg.body.x_height(),
-            kt: cfg.body.k_tracking(),
-            lb: cfg.body.leading_base(),
-            bws: cfg.body.word_space(),
-            h_xh: cfg.heading.x_height(),
-            h_kt: cfg.heading.k_tracking(),
-            h_lb: cfg.heading.leading_base(),
-            h_bws: cfg.heading.word_space(),
+            xh: cfg.body.x_height,
+            kt: cfg.body.k_tracking,
+            lb: cfg.body.leading_base,
+            bws: cfg.body.word_space,
+            h_xh: cfg.heading.x_height,
+            h_kt: cfg.heading.k_tracking,
+            h_lb: cfg.heading.leading_base,
+            h_bws: cfg.heading.word_space,
             kws: WORD_SPACE_K,
             tc: TRACKING_CLAMP,
             lmin: LEADING_CLAMP.0,
             lmax: LEADING_CLAMP.1,
             measure: MEASURE,
+            aw: cfg.body.avg_advance,
             size_min: format!("{:.4}rem", DEFAULT_SIZE_MIN_PT / PT_PER_REM),
             lead0,
             h_lead0,
@@ -613,6 +646,40 @@ impl Renderer for Css {
         }
         .render()
         .expect("render optical.css");
+
+        // ── delivery: @font-face for any SELECTED font shipped WITH bytes (an external `Embed`).
+        // Bundled fonts are `System` → no @font-face, so the default output is untouched. Embedded as
+        // a self-contained data: URI so the font renders with no extra files. Deduped by family
+        // (body == heading emits once); prepended to optical.css, where families live. ──
+        let mut seen = std::collections::HashSet::new();
+        let mut faces = String::new();
+        for f in [&cfg.body, &cfg.heading] {
+            let FontDelivery::Faces(set) = &f.delivery else { continue };
+            if !seen.insert(f.family.as_str()) {
+                continue; // body == heading: emit the family's face set once
+            }
+            // One @font-face per face — each declares the weight RANGE (variable) or value (static) +
+            // slant it covers, so the browser engages the font's axis / picks the right static face
+            // instead of faux-bolding cascade's headings. Embed → data: URI; linked → url(href).
+            for face in set {
+                let src = match &face.href {
+                    Some(href) => href.clone(),
+                    None => format!("data:{};base64,{}", face.format.mime(), base64(&face.bytes)),
+                };
+                let (lo, hi) = face.style.weight;
+                let weight = if lo == hi { lo.to_string() } else { format!("{lo} {hi}") };
+                let slant = if face.style.italic { "italic" } else { "normal" };
+                faces.push_str(&format!(
+                    "@font-face {{ font-family: \"{}\"; src: url(\"{}\") format(\"{}\"); font-weight: {}; font-style: {}; font-display: swap; }}\n",
+                    f.family,
+                    src,
+                    face.format.css_format(),
+                    weight,
+                    slant,
+                ));
+            }
+        }
+        let font = if faces.is_empty() { font } else { format!("{faces}{font}") };
 
         // layout.css — the DOCUMENT MODEL, projected. Each Role's structure (spec) × its
         // role_color (theme) → an element rule. Every role→step/weight/spacing binding comes from
@@ -684,7 +751,17 @@ impl Renderer for Css {
         // but its cascade custom-property references are still typed and single-sourced.
         let mut layout = type_rules;
         layout.push_str("\n/* ── representation: box model, states, chrome (cascade-css behaviour) ── */\n");
-        layout.push_str(&format!(".cascade {{ box-sizing: border-box; max-inline-size: calc({} * 1ch); margin-inline: auto; padding: {}; text-rendering: optimizeLegibility; font-kerning: normal; font-feature-settings: \"kern\", \"liga\", \"clig\"; -webkit-font-smoothing: antialiased; hyphens: none; }}\n", Var::measure().get(), Var::space("p5").get()));
+        // The reading measure, single-sourced. `--cf-measure-inline` is the TEXT line length: the
+        // spec's character `measure` × the body font's real mean advance (`--cf-aw`, em) via
+        // copyfitting — a TRUE character count per typeface, not a `1ch` (the "0" advance, which
+        // overshoots and breaches the WCAG 1.4.8 ~80ch ceiling) nor a textbook 0.5em. `--cf-aw` is
+        // reactive, so switching the body face (`bundle-*`) re-resolves it. Every layout mode binds
+        // this SAME text width: banded caps its offset text column at it (sidenotes.css), and the
+        // centered container below sizes to it PLUS the page padding — with border-box, padding is
+        // inside max-inline-size, so the container must be `measure + 2×pad` for the TEXT (not the
+        // text-minus-padding) to equal the measure. min(100%, …) keeps it inside a narrow viewport.
+        let pad = Var::space("p5").get();
+        layout.push_str(&format!(".cascade {{ box-sizing: border-box; {mi}: calc({m} * {aw} * 1em); max-inline-size: min(100%, calc({mir} + 2 * {pad})); margin-inline: auto; padding: {pad}; text-rendering: optimizeLegibility; font-kerning: normal; font-feature-settings: \"kern\", \"liga\", \"clig\"; -webkit-font-smoothing: antialiased; hyphens: none; }}\n", mi = Var::measure_inline().def(), m = Var::measure().get(), aw = Var::avg_advance().get(), mir = Var::measure_inline().get(), pad = pad));
         layout.push_str(".cascade *, .cascade *::before, .cascade *::after { box-sizing: border-box; }\n");
         layout.push_str(".cascade > *:last-child { margin-bottom: 0; }\n");
         layout.push_str(".cascade :is(h1, h2, h3, h4):first-child { margin-top: 0; }\n");
@@ -722,6 +799,7 @@ impl Renderer for Css {
             baseline: Var::space("baseline").get(),
             marker: Var::color("link").get(),
             rule: Var::color("rule").get(),
+            measure: Var::measure_inline().get(),
         }
         .render()
         .expect("render sidenotes.css");
@@ -825,15 +903,35 @@ mod tests {
 
     #[test]
     fn font_family_is_spec_identity_plus_css_fallbacks() {
-        assert_eq!(Css.font_family(Font::Lora), "\"Lora\", Georgia, \"Times New Roman\", serif");
-        assert_eq!(Css.font_family(Font::Inter), "\"Inter\", system-ui, -apple-system, sans-serif");
+        assert_eq!(Css.font_family(&Font::Lora.into()), "\"Lora\", Georgia, \"Times New Roman\", serif");
+        assert_eq!(Css.font_family(&Font::Inter.into()), "\"Inter\", system-ui, -apple-system, sans-serif");
     }
 
     #[test]
     fn family_is_selected_by_category_type_not_by_font() {
-        let fallbacks = |f: Font| Css.font_family(f).split_once(", ").unwrap().1.to_string();
-        assert_eq!(fallbacks(Font::Inter), fallbacks(Font::Jost)); // both sans → same
-        assert_ne!(fallbacks(Font::Lora), fallbacks(Font::Inter)); // serif → different
+        // The fallback stack is chosen by CATEGORY, not the specific family — two different families
+        // of the same category share it; different categories differ. Shown with synthetic resolved
+        // fonts so it doesn't depend on the bundle shipping two of any one category.
+        let stack = |family: &str, category: Category| {
+            Css.font_family(&ResolvedFont {
+                family: family.into(),
+                category,
+                optical_size: "12pt".into(),
+                x_height: 0.5,
+                cap_height: 0.7,
+                avg_advance: 0.46,
+                k_tracking: 0.02,
+                leading_base: 1.4,
+                word_space: 0.28,
+                delivery: FontDelivery::System,
+            })
+            .split_once(", ")
+            .unwrap()
+            .1
+            .to_string()
+        };
+        assert_eq!(stack("Alpha", Category::Sans), stack("Beta", Category::Sans)); // same cat → same
+        assert_ne!(stack("Alpha", Category::Sans), stack("Gamma", Category::Serif)); // diff cat → diff
     }
 
     #[test]
@@ -906,6 +1004,38 @@ mod tests {
     }
 
     #[test]
+    fn measure_is_a_copyfit_width_from_the_real_advance_not_ch() {
+        // The reading measure is projected ONCE, via copyfitting: characters × the body font's real
+        // mean advance (--cf-aw) × 1em — never `ch` (the "0" advance, which overshoots) nor 0.5em.
+        let layout = out("layout.css");
+        // --cf-measure-inline is the TEXT line length (no padding); the centered container sizes to
+        // it PLUS the page padding, so the text (not text-minus-padding) equals the measure.
+        assert!(layout.contains("--cf-measure-inline: calc(var(--cf-measure) * var(--cf-aw) * 1em);"));
+        assert!(layout.contains(
+            "max-inline-size: min(100%, calc(var(--cf-measure-inline) + 2 * var(--cr-space-p5)))"
+        ));
+        assert!(!layout.contains("* 1ch"));
+        // --cf-measure stays the raw character count (the optical lead0 formula consumes it); --cf-aw
+        // carries the per-font advance, and each bundle redefines it so the measure is reactive.
+        let optical = out("optical.css");
+        assert!(optical.contains("--cf-measure: 65;"));
+        assert!(optical.contains("--cf-aw: 0.4714;")); // default body = Inter's measured advance
+        assert!(out("typefaces.css").contains("--cf-aw:  0.4635;")); // Lora bundle overrides it
+    }
+
+    #[test]
+    fn banded_notes_keep_the_reading_measure() {
+        // Turning on margin notes (banded) must NOT discard the measure: the offset text column
+        // binds the SAME single-sourced value as the centered column, not a raw percentage.
+        let sn = out("sidenotes.css");
+        assert!(sn.contains(
+            ".cascade.sidenotes.banded > *:not(.sidenote):not(.marginnote) { width: var(--sn-text); max-inline-size: min(100%, var(--cf-measure-inline)); }"
+        ));
+        // and it's a defined property (layout.css defines it), so the reference resolves.
+        assert!(out("layout.css").contains("--cf-measure-inline: "));
+    }
+
+    #[test]
     fn entrypoint_imports_every_module() {
         let entry = out("cascade.css");
         // one include pulls the whole system; @imports lead the file.
@@ -970,7 +1100,7 @@ mod tests {
             assert!(optical.contains(&format!(".cascade.bundle-{cat} {{")), "missing bundle-{cat}");
             assert!(optical.contains(&format!(".cascade.heading-{cat} {{")), "missing heading-{cat}");
         }
-        for font in ["inter", "jost", "lora"] {
+        for font in ["inter", "lora"] {
             assert!(typefaces.contains(&format!(".cascade.bundle-{font} {{")), "missing bundle-{font}");
             assert!(typefaces.contains(&format!(".cascade.heading-{font} {{")), "missing heading-{font}");
         }

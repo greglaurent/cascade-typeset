@@ -1,8 +1,7 @@
-// cascade — font measure: Lora (serif). OS/2 metrics + optical profile. One RON per
-// typeface: drop a file in fonts/ and it's a valid `Font` everywhere, compiler-checked.
+// cascade — font measure: Lora (serif). OS/2 metrics + optical profile.
 (
     name: "Lora",
     category: serif,
     profile:  (optical_size: "11pt", k_tracking: 0.022, leading_base: 1.38, word_space: 0.28),
-    measured: (x_height: 0.50, cap_height: 0.70, units_per_em: 1000, sx: "sxHeight 500", asc: "1.006", desc: "-0.274"),
+    measured: (x_height: 0.500, cap_height: 0.700, avg_advance: 0.4635, units_per_em: 1000, sx: "sxHeight 500", asc: "1.006", desc: "-0.274"),
 )

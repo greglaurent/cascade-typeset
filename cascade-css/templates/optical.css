@@ -21,6 +21,7 @@
   --cf-lmin: {{ lmin }};
   --cf-lmax: {{ lmax }};
   --cf-measure: {{ measure }};
+  --cf-aw: {{ aw }};
   --cf-size-min: {{ size_min }};
   --cf-lead0: {{ lead0 }};
 
@@ -48,6 +49,6 @@
 
 /* generic body + heading bundles (serif/sans/mono) — switch the family to the generic stack and
    reset the optical to that category's baseline; class on the .cascade box. */
-{% for p in profiles %}.cascade.bundle-{{ p.id }} { --cf-family-body: var(--cf-font-{{ p.id }}); --cf-xh: {{ p.xh }}; --cf-kt: {{ p.kt }}; --cf-lb: {{ p.lb }}; --cf-bws: {{ p.bws }}; }
+{% for p in profiles %}.cascade.bundle-{{ p.id }} { --cf-family-body: var(--cf-font-{{ p.id }}); --cf-xh: {{ p.xh }}; --cf-kt: {{ p.kt }}; --cf-lb: {{ p.lb }}; --cf-bws: {{ p.bws }}; --cf-aw: {{ p.aw }}; }
 .cascade.heading-{{ p.id }} { --cf-family-heading: var(--cf-font-{{ p.id }}); --cf-h-xh: {{ p.xh }}; --cf-h-kt: {{ p.kt }}; --cf-h-lb: {{ p.lb }}; }
 {% endfor %}

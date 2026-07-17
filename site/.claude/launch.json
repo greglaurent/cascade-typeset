@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cascade-site",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /home/greg/Workspace/cascade-typeset/site && BIND_ADDR=0.0.0.0:8080 cargo run --bin cascade-site"
+      ],
+      "port": 8080
+    }
+  ]
+}

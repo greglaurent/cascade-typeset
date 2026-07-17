@@ -30,5 +30,7 @@ where they'd fight the ported layout.
 
 ## Dev loop
 
-    just build-web   # vendor datastar + Vite build -> web/dist
-    just run         # cargo run -- http://localhost:8080 (CSS rendered in-memory)
+No task runner. The frontend is a plain pnpm build; the server is `cargo run`:
+
+    pnpm -C web install && pnpm -C web build   # vendor datastar + Vite build -> web/dist
+    cargo run                                  # http://localhost:8080 (CSS rendered in-memory)

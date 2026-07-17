@@ -39,12 +39,16 @@
     // specific font is selected (generic serif / sans / mono). A selected font OVERRIDES
     // this with its own measured metrics + knobs. x_height lives HERE because there's no
     // font to measure; it must NOT appear on a font (there it only restates measured.x_height).
+    // avg_advance = the generic mean character advance (em) for the category when no specific font
+    // is selected — the copyfitting factor that turns the character `measure` into a real width. A
+    // selected font OVERRIDES it with its own measured value (fonts/<name>.ron). Mono is monospaced,
+    // so its advance is its single fixed width (~0.6em).
     category_defaults: [
-        (category: serif, optical_size: "11pt", x_height: 0.49, k_tracking: 0.022, leading_base: 1.35, word_space: 0.28),
-        (category: sans,  optical_size: "12pt", x_height: 0.53, k_tracking: 0.03,  leading_base: 1.45, word_space: 0.28),
+        (category: serif, optical_size: "11pt", x_height: 0.49, k_tracking: 0.022, leading_base: 1.35, word_space: 0.28, avg_advance: 0.46),
+        (category: sans,  optical_size: "12pt", x_height: 0.53, k_tracking: 0.03,  leading_base: 1.45, word_space: 0.28, avg_advance: 0.47),
         // leading_base 1.5: WCAG 1.4.12 body minimum; mono benefits from looser leading (the global
         // optical.leading_clamp max is now 1.5, so code reaches ~1.47 effective rather than capping at 1.45).
-        (category: mono,  optical_size: "12pt", x_height: 0.535, k_tracking: 0.0, leading_base: 1.5, word_space: 0.0),
+        (category: mono,  optical_size: "12pt", x_height: 0.535, k_tracking: 0.0, leading_base: 1.5, word_space: 0.0, avg_advance: 0.6),
     ],
     // NOTE: colours live in theme.ron (the swappable colour layer), NOT here.
     multipliers: [

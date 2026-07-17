@@ -66,14 +66,17 @@ input.margin-toggle { display: none; }
 .cascade.sidenotes .note-group:has(.margin-toggle:checked) > .sidenote-number { order: 0; }
 .cascade.sidenotes .note-group:has(.margin-toggle:checked) > .sidenote { order: 1; flex-basis: 100%; margin: 0; }
 
-/* ── Banded, wide (≥62rem): offset column + notes floated into the band. ── */
+/* ── Banded, wide (≥62rem): offset column + notes floated into the band. The band spans the
+ *    content + note margin, but the TEXT column stays bound to the reading measure (the same
+ *    single-sourced value the centered column uses) — turning on margin notes must not widen the
+ *    line past a comfortable measure. So the text column is min(its band share, the measure). ── */
 @media (min-width: 62rem) {
   .cascade.sidenotes.banded {
     box-sizing: content-box; max-inline-size: none;
     width: var(--sn-band-width); margin-inline: auto;
     padding-left: var(--sn-offset); padding-right: 0;
   }
-  .cascade.sidenotes.banded > *:not(.sidenote):not(.marginnote) { width: var(--sn-text); max-inline-size: none; }
+  .cascade.sidenotes.banded > *:not(.sidenote):not(.marginnote) { width: var(--sn-text); max-inline-size: min(100%, {{ measure }}); }
   .cascade.sidenotes.banded .sidenote,
   .cascade.sidenotes.banded .marginnote,
   .cascade.sidenotes.banded:has(.margin-toggle:checked) .sidenote,

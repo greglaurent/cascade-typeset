@@ -9,6 +9,23 @@ edition = "2024"
 # dependency (path/git/registry) in any workspace -- a website can depend on cascade-css and render
 # CSS via its API. serde/ron are BUILD-only; the generated types are plain Rust, so the library has
 # ZERO runtime dependencies.
+# `measure` is the runtime font toolkit (used by `cascade` the CLI): measure a font file, AND load a
+# measured font RON into a `ResolvedFont`. It's the only thing needing a font reader / a RON parser,
+# so it's OPTIONAL — without the feature the library keeps its ZERO runtime deps.
+[features]
+measure = ["dep:ttf-parser", "dep:ron", "dep:serde", "dep:woff2"]
+
+[dependencies]
+# Pure-Rust OpenType/TrueType reader — reads OS/2 sxHeight/capHeight, head unitsPerEm, and glyph
+# advances for `measure`. Optional: pulled in only with the `measure` feature.
+ttf-parser = { version = "0.25", optional = true }
+# Decompress woff2 (the ubiquitous web font format) → sfnt, so it's measurable/introspectable like a
+# .ttf/.otf. Pure Rust (brotli + table reconstruction). Optional.
+woff2 = { package = "woff2-patched", version = "0.4", optional = true }
+# Read a measured font RON back into a `ResolvedFont` at runtime (external fonts). Optional.
+ron = { version = "0.12", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+
 [build-dependencies]
 serde = { version = "1", features = ["derive"] }
 ron = "0.12"

@@ -5,6 +5,7 @@
   --cf-kt:  {{ f.k_tracking }};
   --cf-lb:  {{ f.leading_base }};
   --cf-bws: {{ f.word_space }};
+  --cf-aw:  {{ f.avg_advance }};
 }
 .cascade.heading-{{ f.slug }} {
   --cf-family-heading: {{ f.family }};

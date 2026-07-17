@@ -24,11 +24,12 @@ attributes the renderer emits.
 
 From this directory (`cascade-typeset/site`), with `cargo`, `node`, `pnpm`:
 
-    just setup        # .env from the example
-    just build-web    # vendor datastar + Vite build -> web/dist
-    just run          # http://localhost:8080  (renders /css/cascade.css in-memory)
+    pnpm -C web install && pnpm -C web build   # vendor datastar + Vite build -> web/dist
+    cargo run                                  # http://localhost:8080  (renders /css/cascade.css in-memory)
 
-For a frontend dev loop, run `just watch-web` alongside `just run`. See `just` for all recipes.
+`BIND_ADDR` (default `0.0.0.0:8080`) sets the listen address. For a frontend dev loop, run
+`pnpm -C web watch` alongside `cargo run`. (There is no task runner — the cascade library's own
+operations are `cargo run -p cascade-cli -- <build|dist|measure>`; everything else is `cargo`/`pnpm`.)
 
 ## Layout
 
