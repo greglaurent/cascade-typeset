@@ -1,0 +1,7 @@
+// cascade — font measure: IBM Plex Mono (mono). OS/2 metrics + optical profile.
+(
+    name: "IBM Plex Mono",
+    category: mono,
+    profile:  (optical_size: "12pt", k_tracking: 0.0, leading_base: 1.5, word_space: 0.0),
+    measured: (x_height: 0.516, cap_height: 0.698, avg_advance: 0.6000, units_per_em: 1000, sx: "sxHeight 516", asc: "1.025", desc: "-0.275"),
+)

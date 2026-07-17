@@ -15,10 +15,10 @@
 #![enable(implicit_some)]
 (
     scale_default: "golden-ditonic",
-    // Default typeface PER font-role (each a font in fonts/). body and heading are independent —
-    // a role's `font: body|heading` resolves to the matching face and ITS measured optical.
-    // `code` uses the generic mono family + the mono category optical.
-    default_fonts: (body: "Inter", heading: "Lora"),
+    // Default typeface PER font-role (each a font in fonts/). body, heading and code are independent —
+    // a role's `font: body|heading|code` resolves to the matching face and ITS measured optical. Each
+    // names a bundled font in fonts/; the category is only the generic fallback when none is selected.
+    default_fonts: (body: "Inter", heading: "Lora", code: "IBM Plex Mono"),
     scale_steps: (min: -5, max: 5),
     scale_presets: [
         (name: "classical",      ratio: 2.0,                n: 5),

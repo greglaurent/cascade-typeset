@@ -1,9 +1,9 @@
 # cascade — the CONSUMER config: the limited surface a build may change.
 #
 # Every field is optional; an omitted field takes the spec's compiled default. Run
-# `cascade build --config cascade.toml`, and any --scale/--body/--heading/--theme flag overrides
-# the matching field here. Names must exist in the compiled spec (`cascade list` shows what's
-# available); an unknown value — or an unknown key — is an error, not a silent fallback.
+# `cascade build --config cascade.toml`, and any --scale/--body/--heading/--code/--theme flag
+# overrides the matching field here. Names must exist in the compiled spec (`cascade list` shows
+# what's available); an unknown value — or an unknown key — is an error, not a silent fallback.
 #
 # JSON works too (`cascade build --config cascade.json`); the format is chosen by extension. The
 # deep engine lives in cascade/tokens.ron — that ron is the spec's internals, not yours to edit.
@@ -11,4 +11,5 @@
 scale   = "golden-ditonic"
 body    = "Inter"
 heading = "Lora"
+code    = "IBM Plex Mono"
 theme   = "paper"

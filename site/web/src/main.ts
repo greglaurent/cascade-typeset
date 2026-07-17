@@ -11,6 +11,7 @@ const sels = {
   scale: document.getElementById("sel-scale") as HTMLSelectElement,
   body: document.getElementById("sel-style") as HTMLSelectElement,
   heading: document.getElementById("sel-heading") as HTMLSelectElement,
+  code: document.getElementById("sel-code") as HTMLSelectElement,
   notes: document.getElementById("sel-notes") as HTMLSelectElement,
 };
 let theme: "light" | "dark" = "light";
@@ -20,7 +21,8 @@ const state = () => {
   // "match body" (empty heading) mirrors the body typeface via the matching heading-* class
   // (bundle-serif -> heading-serif, bundle-lora -> heading-lora, ...).
   const heading = sels.heading.value || body.replace("bundle-", "heading-");
-  return { scale: sels.scale.value, body, heading, notes: sels.notes.value, theme };
+  // code is independent (empty = the built-in IBM Plex Mono default); no "match body" mirroring.
+  return { scale: sels.scale.value, body, heading, code: sels.code.value, notes: sels.notes.value, theme };
 };
 const isCss = () => view.dataset.kind === "css";
 // The specimen exposes setCascade() as a global on its own window (same origin).

@@ -6,6 +6,23 @@
   <title>cascade -- sample</title>
   <link rel="stylesheet" href="/css/cascade.css">
   <style>
+    /* SITE serves the bundled fonts (variable .ttf from the spec's fonts/sources, via /fonts) so the
+       Inter/Lora typeface options render the real faces instead of the browser's fallback stack.
+       The library references families by name (System delivery); shipping them is the site's job. */
+    @font-face {
+      font-family: "Inter"; src: url("/fonts/inter.ttf") format("truetype");
+      font-weight: 100 900; font-style: normal; font-display: swap;
+    }
+    @font-face {
+      font-family: "Lora"; src: url("/fonts/lora.ttf") format("truetype");
+      font-weight: 400 700; font-style: normal; font-display: swap;
+    }
+    /* The bundled code face: cascade's mono category (DEFAULT_MONO_FAMILY) resolves to IBM Plex Mono,
+       measured into the mono optical -- so code renders the real face, not the system monospace. */
+    @font-face {
+      font-family: "IBM Plex Mono"; src: url("/fonts/ibmplexmono.ttf") format("truetype");
+      font-weight: 400; font-style: normal; font-display: swap;
+    }
     html, body { margin: 0; background: var(--ct-bg); }
     /* SITE customization (not a library change): a larger reading base than the cascade default,
        set via the --cs-base custom property -- the intended consumer override point. */
@@ -36,7 +53,7 @@
     <h2>On measure and rhythm</h2>
     <p>A column of text is a grid in disguise. Every line rests on an invisible baseline, and
       the space between paragraphs is a whole multiple of it, so the vertical rhythm never
-      stumbles.<label for="mn1" class="margin-toggle">&#8853;</label><input type="checkbox" id="mn1" class="margin-toggle"><span class="marginnote">Bringhurst's comfortable measure runs 45-75 characters; cascade defaults to sixty-six.</span> Even inline code such as <code>font-size</code> is pulled onto the same measure.</p>
+      stumbles.<label for="mn1" class="margin-toggle">&#8853;</label><input type="checkbox" id="mn1" class="margin-toggle"><span class="marginnote">Bringhurst's comfortable measure runs 45-75 characters; cascade defaults to sixty-six.</span> Even inline code such as <code>font-size</code> is pulled onto the same measure.<a href="#fn1" id="fnref1" class="footnote-ref" role="doc-noteref"><sup>1</sup></a></p>
 
     <blockquote>
       <p>Typography exists to honour content.</p>
@@ -71,19 +88,23 @@
       <figcaption>Figure 1. A figure with its caption set in the caption style.</figcaption>
     </figure>
 
-    <hr>
+    <section class="footnotes" role="doc-endnotes">
+      <ol>
+        <li id="fn1">A traditional footnote, placed by hand at the foot of the document -- numbered by the list, linked back to its marker, and coexisting with the margin notes above. <a href="#fnref1" class="footnote-back" role="doc-backlink" aria-label="Back to reference">&#8617;</a></li>
+      </ol>
+    </section>
   </article>
 
   <script>
     // The host chrome drives this specimen by calling setCascade() -- exposed globally for the
     // same-origin embedder. Opened on its own, it just renders the default below.
-    window.setCascade = ({ scale, body, heading, theme, notes }) => {
+    window.setCascade = ({ scale, body, heading, code, theme, notes }) => {
       document.getElementById('doc').className =
-        `cascade sidenotes ${notes || 'banded'} ${scale} ${body} ${heading}`.trim();
+        `cascade sidenotes ${notes || 'banded'} ${scale} ${body} ${heading} ${code || ''}`.trim();
       if (theme) document.documentElement.dataset.theme = theme;
     };
     window.setCascade({
-      scale: 'scale-golden-ditonic', body: 'bundle-serif', heading: '', notes: 'banded',
+      scale: 'scale-golden-ditonic', body: 'bundle-serif', heading: '', code: '', notes: 'banded',
       theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
     });
   </script>

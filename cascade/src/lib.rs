@@ -62,12 +62,17 @@ mod tests {
         // avg_advance is a measured metric (the copyfitting factor): per-font, plus a category default.
         assert_eq!(Font::Inter.avg_advance(), 0.4714);
         assert_eq!(Category::Serif.default_avg_advance(), 0.46);
-        // The bundle ships Inter + Lora; other faces are the client's (external) domain.
-        assert_eq!(Font::ALL.len(), 2);
+        // The bundle ships Inter (body), Lora (heading), IBM Plex Mono (code); other faces are the
+        // client's (external) domain. A multi-word family compiles to a PascalCase variant.
+        assert_eq!(Font::ALL.len(), 3);
+        assert_eq!(Font::IBMPlexMono.family(), "IBM Plex Mono");
+        assert_eq!(Font::IBMPlexMono.category(), Category::Mono);
+        assert_eq!(Font::IBMPlexMono.x_height(), 0.516);
 
         assert_eq!(SCALE_DEFAULT, ScalePreset::GoldenDitonic);
         assert_eq!(FONT_BODY, Font::Inter);
         assert_eq!(FONT_HEADING, Font::Lora);
+        assert_eq!(FONT_CODE, Font::IBMPlexMono);
         assert_eq!(ScalePreset::GoldenRatio.n(), 1);
         assert_eq!(THEME_DEFAULT, Theme::Paper);
         assert_eq!(Theme::Paper.light(Color::Accent), "#7A2E28");

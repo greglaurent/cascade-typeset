@@ -56,6 +56,7 @@ struct MinMaxI {
 struct DefaultFonts {
     body: String,
     heading: String,
+    code: String,
 }
 #[derive(Deserialize)]
 struct Preset {
@@ -161,9 +162,11 @@ struct Meas {
     desc: String,
 }
 
-/// kebab / plain name -> PascalCase Rust variant identifier.
+/// kebab / spaced / plain name -> PascalCase Rust variant identifier (e.g. "IBM Plex Mono" ->
+/// "IBMPlexMono"). Splits on both '-' and ' ' so multi-word font families are valid identifiers;
+/// `Font::family()` keeps the original spaced name for the CSS output.
 fn pascal(s: &str) -> String {
-    s.split('-')
+    s.split(['-', ' '])
         .map(|w| {
             let mut c = w.chars();
             match c.next() {
@@ -472,11 +475,16 @@ fn main() {
     close(&mut o);
 
     // -- scalar globals (renderer-agnostic only) --
-    for (role, name) in [("body", &s.default_fonts.body), ("heading", &s.default_fonts.heading)] {
+    for (role, name) in [
+        ("body", &s.default_fonts.body),
+        ("heading", &s.default_fonts.heading),
+        ("code", &s.default_fonts.code),
+    ] {
         assert!(fonts.iter().any(|f| &f.name == name), "default_fonts.{role} '{name}' is not a font in fonts/");
     }
     let _ = writeln!(o, "pub const FONT_BODY: Font = Font::{};", pascal(&s.default_fonts.body));
     let _ = writeln!(o, "pub const FONT_HEADING: Font = Font::{};", pascal(&s.default_fonts.heading));
+    let _ = writeln!(o, "pub const FONT_CODE: Font = Font::{};", pascal(&s.default_fonts.code));
     let _ = writeln!(o, "pub const SCALE_DEFAULT: ScalePreset = ScalePreset::{};", pascal(&s.scale_default));
     let _ = writeln!(o, "pub const THEME_DEFAULT: Theme = Theme::{};", pascal(&theme.default));
     let _ = writeln!(o, "pub const STEPS_MIN: i32 = {};", s.scale_steps.min);

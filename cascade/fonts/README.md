@@ -11,15 +11,21 @@ Currently bundled:
 |---|---|---|
 | `inter.ron` | Inter | sans (body default) |
 | `lora.ron` | Lora | serif (heading default) |
+| `ibmplexmono.ron` | IBM Plex Mono | mono (code default) |
+
+`default_fonts` in `tokens.ron` binds each font-role (`body` / `heading` / `code`) to one of these, so
+code renders the bundled IBM Plex Mono with its own measured optical, exactly as body renders Inter. A
+multi-word family compiles to a PascalCase `Font` variant (`Font::IBMPlexMono`) and slugifies to a single
+CSS token (`.bundle-ibmplexmono`).
 
 ## Sources carry with the spec
 
-`sources/` holds the actual font files (`inter.ttf`, `lora.ttf`) and their SIL OFL licenses
-(`*.OFL.txt`) — vendored so the bundle is fully self-contained and re-measurable **offline, with no
-external tooling**. Both fonts are OFL 1.1 (redistributable). Regenerate every bundled RON from them
+`sources/` holds the actual font files (`inter.ttf`, `lora.ttf`, `ibmplexmono.ttf`) and their SIL OFL
+licenses (`*.OFL.txt`) — vendored so the bundle is fully self-contained and re-measurable **offline, with
+no external tooling**. All three are OFL 1.1 (redistributable). Regenerate every bundled RON from them
 in one command:
 
-    cargo run -p cascade-cli -- measure cascade/fonts/sources     # → inter.ron, lora.ron
+    cargo run -p cascade-cli -- measure cascade/fonts/sources     # → inter.ron, lora.ron, ibmplexmono.ron
 
 This is idempotent — byte-identical to what's committed — and preserves each font's tuned `profile`.
 (`build.rs` scans only `*.ron` at this folder's top level, so `sources/`, this README, and the

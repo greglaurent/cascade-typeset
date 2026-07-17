@@ -1,12 +1,12 @@
 /* cascade-css — optical.css (generated from the spec) */
 .cascade {
-  /* families per font-role: body and heading are independent typefaces (from the spec's
-     default_fonts); code is the generic mono family. */
+  /* families per font-role: body, heading and code are independent typefaces (from the spec's
+     default_fonts), each with its own measured optical. */
   --cf-family-body:    {{ body_family }};
   --cf-family-heading: {{ heading_family }};
   --cf-family-code:    {{ code_family }};
 
-  /* generic font stacks per category — targets for the bundle-serif/sans/mono + heading-* switches */
+  /* generic font stacks per category — targets for the bundle/heading/code-serif|sans|mono switches */
   --cf-font-serif: {{ font_serif }};
   --cf-font-sans:  {{ font_sans }};
   --cf-font-mono:  {{ font_mono }};
@@ -32,6 +32,11 @@
   --cf-h-bws: {{ h_bws }};
   --cf-h-lead0: {{ h_lead0 }};
 
+  /* code optical params (from the code font) — the code subtree binds these; a .code-* switch swaps them */
+  --cf-code-xh: {{ code_xh }};
+  --cf-code-kt: {{ code_kt }};
+  --cf-code-lb: {{ code_lb }};
+
   /* body tracking per step (em) — formula::tracking, projected */
 {% for r in tracks %}  {{ r.name }}: {{ r.value }};
 {% endfor %}
@@ -51,4 +56,5 @@
    reset the optical to that category's baseline; class on the .cascade box. */
 {% for p in profiles %}.cascade.bundle-{{ p.id }} { --cf-family-body: var(--cf-font-{{ p.id }}); --cf-xh: {{ p.xh }}; --cf-kt: {{ p.kt }}; --cf-lb: {{ p.lb }}; --cf-bws: {{ p.bws }}; --cf-aw: {{ p.aw }}; }
 .cascade.heading-{{ p.id }} { --cf-family-heading: var(--cf-font-{{ p.id }}); --cf-h-xh: {{ p.xh }}; --cf-h-kt: {{ p.kt }}; --cf-h-lb: {{ p.lb }}; }
+.cascade.code-{{ p.id }} { --cf-family-code: var(--cf-font-{{ p.id }}); --cf-code-xh: {{ p.xh }}; --cf-code-kt: {{ p.kt }}; --cf-code-lb: {{ p.lb }}; }
 {% endfor %}

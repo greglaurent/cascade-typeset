@@ -13,4 +13,10 @@
   --cf-h-kt: {{ f.k_tracking }};
   --cf-h-lb: {{ f.leading_base }};
 }
+.cascade.code-{{ f.slug }} {
+  --cf-family-code: {{ f.family }};
+  --cf-code-xh: {{ f.x_height }};
+  --cf-code-kt: {{ f.k_tracking }};
+  --cf-code-lb: {{ f.leading_base }};
+}
 {% endfor %}

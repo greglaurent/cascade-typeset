@@ -5,7 +5,9 @@
 //! their own crates (cascade-css, cascade-typst), depend on this one, bring their own
 //! templates, and supply target BEHAVIOR — like how a font resolves to a family with
 //! fallbacks. The protocol renders nothing itself.
-use crate::{Category, Font, ScalePreset, Theme, FONT_BODY, FONT_HEADING, SCALE_DEFAULT, THEME_DEFAULT};
+use crate::{
+    Category, Font, ScalePreset, Theme, FONT_BODY, FONT_CODE, FONT_HEADING, SCALE_DEFAULT, THEME_DEFAULT,
+};
 
 /// One generated output file: a target-relative path and its contents.
 pub struct Output {
@@ -146,17 +148,18 @@ impl From<Font> for ResolvedFont {
 }
 
 /// The LIMITED surface a consumer may change per build: which modular [`ScalePreset`], the body /
-/// heading typefaces, and the colour [`Theme`] (palette). Everything else is the spec (compiled,
+/// heading / code typefaces, and the colour [`Theme`] (palette). Everything else is the spec (compiled,
 /// not tunable). This is the single input to [`Renderer::render`], so every target projects the
 /// SAME choices — the CLI resolves a `cascade.ron` (or flags) into one of these and hands it to each
-/// renderer. `body` / `heading` are RESOLVED fonts (metrics, not the enum): a bundled [`Font`] via
-/// `.into()`, or a runtime-measured external font — the renderer can't tell which. [`Default`] is
-/// the spec's compiled defaults (`SCALE_DEFAULT`, `FONT_BODY`, `FONT_HEADING`, `THEME_DEFAULT`).
+/// renderer. `body` / `heading` / `code` are RESOLVED fonts (metrics, not the enum): a bundled [`Font`]
+/// via `.into()`, or a runtime-measured external font — the renderer can't tell which. [`Default`] is
+/// the spec's compiled defaults (`SCALE_DEFAULT`, `FONT_BODY`, `FONT_HEADING`, `FONT_CODE`, `THEME_DEFAULT`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Config {
     pub scale: ScalePreset,
     pub body: ResolvedFont,
     pub heading: ResolvedFont,
+    pub code: ResolvedFont,
     pub theme: Theme,
 }
 
@@ -166,6 +169,7 @@ impl Default for Config {
             scale: SCALE_DEFAULT,
             body: FONT_BODY.into(),
             heading: FONT_HEADING.into(),
+            code: FONT_CODE.into(),
             theme: THEME_DEFAULT,
         }
     }

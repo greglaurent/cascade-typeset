@@ -39,6 +39,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(|| async { "ok" }))
         // The cascade stylesheet, rendered in-memory via the cascade-css API (single source: the renderer).
         .route("/css/cascade.css", get(web::cascade_css))
+        // Serve the bundled font sources directly from the spec crate (no duplication) so the
+        // specimen can @font-face the real Inter/Lora instead of falling back to system faces.
+        .nest_service("/fonts", ServeDir::new("../cascade/fonts/sources"))
         // Vite build output (hashed JS/CSS, favicon, brand assets).
         .fallback_service(ServeDir::new("web/dist"))
         .layer(TraceLayer::new_for_http())

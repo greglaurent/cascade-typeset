@@ -80,6 +80,9 @@ struct Build {
     /// Heading typeface family (overrides --config).
     #[arg(long)]
     heading: Option<String>,
+    /// Code / monospace typeface family (overrides --config).
+    #[arg(long)]
+    code: Option<String>,
     /// Provision EXTERNAL fonts (repeatable): a font file (.ttf/.otf, measured on the fly), a measured
     /// .ron, or a directory of either. Each becomes selectable by family name via --body/--heading,
     /// like a bundled font. A font file beside a .ron is embedded for delivery. Adds to --config
@@ -153,6 +156,8 @@ struct FileConfig {
     #[serde(default)]
     heading: Option<String>,
     #[serde(default)]
+    code: Option<String>,
+    #[serde(default)]
     theme: Option<String>,
     /// External font provisioning: paths to measured font RONs (or directories of them). The
     /// file-based twin of `--font-path`; the two are merged.
@@ -216,7 +221,7 @@ fn build(b: Build) -> Res {
             }
         }
     }
-    let cfg = resolve(file, b.scale, b.body, b.heading, b.theme, &external)?;
+    let cfg = resolve(file, b.scale, b.body, b.heading, b.code, b.theme, &external)?;
     let renderer = renderer_for(&b.target)?;
 
     let outputs = renderer.render(&cfg);
@@ -246,7 +251,7 @@ fn build(b: Build) -> Res {
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
     // Linked external font files (delivery: Link) are emitted alongside the CSS and tracked too.
-    let linked: Vec<(&str, &[u8])> = [&cfg.body, &cfg.heading]
+    let linked: Vec<(&str, &[u8])> = [&cfg.body, &cfg.heading, &cfg.code]
         .into_iter()
         .filter_map(|f| match &f.delivery {
             FontDelivery::Faces(faces) => Some(faces),
@@ -307,13 +312,14 @@ fn build(b: Build) -> Res {
         println!("kept {} file(s) edited since generated (not removed): {}", kept.len(), kept.join(", "));
     }
     println!(
-        "wrote {} file(s) to {} — target: {}, scale: {}, body: {}, heading: {}, theme: {}",
+        "wrote {} file(s) to {} — target: {}, scale: {}, body: {}, heading: {}, code: {}, theme: {}",
         outputs.len(),
         b.out.display(),
         renderer.name(),
         cfg.scale.id(),
         cfg.body.family,
         cfg.heading.family,
+        cfg.code.family,
         cfg.theme.id(),
     );
     Ok(())
@@ -331,6 +337,7 @@ fn dist(d: Dist) -> Res {
         scale: None,
         body: None,
         heading: None,
+        code: None,
         font_path: vec![],
         link_fonts: false,
         theme: None,
@@ -349,6 +356,7 @@ fn resolve(
     scale: Option<String>,
     body: Option<String>,
     heading: Option<String>,
+    code: Option<String>,
     theme: Option<String>,
     external: &[ResolvedFont],
 ) -> Result<Config, String> {
@@ -361,6 +369,9 @@ fn resolve(
     }
     for f in file.heading.iter().chain(heading.iter()) {
         cfg.heading = resolve_font(f, external)?;
+    }
+    for f in file.code.iter().chain(code.iter()) {
+        cfg.code = resolve_font(f, external)?;
     }
     for t in file.theme.iter().chain(theme.iter()) {
         cfg.theme = parse_theme(t)?;
@@ -694,7 +705,7 @@ fn list() -> Res {
         let tag = if p == d.scale { "  (default)" } else { "" };
         println!("  {}{}", p.id(), tag);
     }
-    println!("\nfonts (--body / --heading):");
+    println!("\nfonts (--body / --heading / --code):");
     for f in Font::ALL {
         let mut tags = Vec::new();
         if d.body.family == f.family() {
@@ -702,6 +713,9 @@ fn list() -> Res {
         }
         if d.heading.family == f.family() {
             tags.push("heading-default");
+        }
+        if d.code.family == f.family() {
+            tags.push("code-default");
         }
         let tag = if tags.is_empty() { String::new() } else { format!("  ({})", tags.join(", ")) };
         println!("  {:8} {}{}", f.family(), f.category().as_str(), tag);

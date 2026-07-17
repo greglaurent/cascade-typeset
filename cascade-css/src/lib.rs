@@ -25,8 +25,7 @@ const FLUID_MAX_VW: f64 = 80.0; // rem (~1280px)
 const FLUID_GROWTH: f64 = 1.2;
 /// The grid unit as a fraction of the base — also CSS behavior.
 const CSS_UNIT: f64 = 0.375;
-/// cascade-css's default mono/code family and readability floor — its defaults, overridable.
-const DEFAULT_MONO_FAMILY: &str = "DejaVu Sans Mono";
+/// Readability floor for the fluid base clamp — cascade-css's default, overridable.
 const DEFAULT_SIZE_MIN_PT: f64 = 9.0; // → 0.75rem
 
 pub struct Css;
@@ -246,6 +245,26 @@ impl Var {
     fn xh(fr: FontRole) -> Var {
         Var(format!("cf-{}xh", Self::opt(fr)))
     }
+    // the DOCUMENT body x-height ratio, captured at the root as a concrete value so it survives
+    // the code subtree's `--cf-xh` override (which swaps in the mono metrics for leading). Drives
+    // `font-size-adjust` on code, optically matching the mono's x-height to the body's. Because it
+    // is `var(--cf-xh)` resolved on `.cascade`, a `bundle-*` switch re-derives it reactively.
+    fn xh_doc() -> Var {
+        Var("cf-xh-doc".to_string())
+    }
+    // Code-role optical, held in a dedicated var set (not the shared body `--cf-xh` etc.) so a
+    // `.code-<font>` switch can override it independently of the body. The code subtree binds
+    // `--cf-xh: var(--cf-code-xh)` (and kt/lb), so the leading/tracking formulas re-resolve from
+    // whichever code face is selected — the exact mirror of `.bundle-*` (body) and `.heading-*`.
+    fn code_xh() -> Var {
+        Var("cf-code-xh".to_string())
+    }
+    fn code_kt() -> Var {
+        Var("cf-code-kt".to_string())
+    }
+    fn code_lb() -> Var {
+        Var("cf-code-lb".to_string())
+    }
     fn kt(fr: FontRole) -> Var {
         Var(format!("cf-{}kt", Self::opt(fr)))
     }
@@ -373,6 +392,11 @@ struct FontCss {
     h_kt: f64,
     h_lb: f64,
     h_bws: f64,
+    // code optical (from the code font) — the root default the code subtree binds and a `.code-*`
+    // switch overrides. word-space/advance omitted: code sets word-spacing:normal and has no measure.
+    code_xh: f64,
+    code_kt: f64,
+    code_lb: f64,
     kws: f64,
     tc: f64,
     lmin: f64,
@@ -520,7 +544,9 @@ impl Renderer for Css {
         let fonts = Font::ALL
             .into_iter()
             .map(|f| FontRow {
-                slug: f.family().to_lowercase(),
+                // slug is a single-token CSS class (.bundle-<slug>); strip spaces from multi-word
+                // families ("IBM Plex Mono" -> "ibmplexmono") so the selector doesn't split.
+                slug: f.family().to_lowercase().replace(' ', ""),
                 family: self.font_family(&f.into()),
                 x_height: f.x_height(),
                 k_tracking: f.k_tracking(),
@@ -615,10 +641,10 @@ impl Renderer for Css {
         let font = FontCss {
             body_family: self.font_family(&cfg.body),
             heading_family: self.font_family(&cfg.heading),
-            code_family: format!("\"{}\", {}", DEFAULT_MONO_FAMILY, Self::fallbacks(Category::Mono)),
+            code_family: self.font_family(&cfg.code),
             font_serif: Self::fallbacks(Category::Serif).to_string(),
             font_sans: Self::fallbacks(Category::Sans).to_string(),
-            font_mono: format!("\"{}\", {}", DEFAULT_MONO_FAMILY, Self::fallbacks(Category::Mono)),
+            font_mono: Self::fallbacks(Category::Mono).to_string(),
             xh: cfg.body.x_height,
             kt: cfg.body.k_tracking,
             lb: cfg.body.leading_base,
@@ -627,6 +653,9 @@ impl Renderer for Css {
             h_kt: cfg.heading.k_tracking,
             h_lb: cfg.heading.leading_base,
             h_bws: cfg.heading.word_space,
+            code_xh: cfg.code.x_height,
+            code_kt: cfg.code.k_tracking,
+            code_lb: cfg.code.leading_base,
             kws: WORD_SPACE_K,
             tc: TRACKING_CLAMP,
             lmin: LEADING_CLAMP.0,
@@ -653,7 +682,7 @@ impl Renderer for Css {
         // (body == heading emits once); prepended to optical.css, where families live. ──
         let mut seen = std::collections::HashSet::new();
         let mut faces = String::new();
-        for f in [&cfg.body, &cfg.heading] {
+        for f in [&cfg.body, &cfg.heading, &cfg.code] {
             let FontDelivery::Faces(set) = &f.delivery else { continue };
             if !seen.insert(f.family.as_str()) {
                 continue; // body == heading: emit the family's face set once
@@ -742,11 +771,6 @@ impl Renderer for Css {
         // spec's tokens/optical + the theme colours, but authors no role→step binding. Border
         // colours are pulled from role_color (single source); placement/width are CSS reps. ──
         let border = |r: Role| role_color(r).border.unwrap_or("rule");
-        let (mono_xh, mono_kt, mono_lb) = (
-            Category::Mono.default_x_height(),
-            Category::Mono.default_k_tracking(),
-            Category::Mono.default_leading_base(),
-        );
         // Every var REFERENCE below goes through `Var` too — the representation is authored CSS,
         // but its cascade custom-property references are still typed and single-sourced.
         let mut layout = type_rules;
@@ -761,7 +785,7 @@ impl Renderer for Css {
         // inside max-inline-size, so the container must be `measure + 2×pad` for the TEXT (not the
         // text-minus-padding) to equal the measure. min(100%, …) keeps it inside a narrow viewport.
         let pad = Var::space("p5").get();
-        layout.push_str(&format!(".cascade {{ box-sizing: border-box; {mi}: calc({m} * {aw} * 1em); max-inline-size: min(100%, calc({mir} + 2 * {pad})); margin-inline: auto; padding: {pad}; text-rendering: optimizeLegibility; font-kerning: normal; font-feature-settings: \"kern\", \"liga\", \"clig\"; -webkit-font-smoothing: antialiased; hyphens: none; }}\n", mi = Var::measure_inline().def(), m = Var::measure().get(), aw = Var::avg_advance().get(), mir = Var::measure_inline().get(), pad = pad));
+        layout.push_str(&format!(".cascade {{ box-sizing: border-box; {mi}: calc({m} * {aw} * 1em); max-inline-size: min(100%, calc({mir} + 2 * {pad})); margin-inline: auto; padding: {pad}; text-rendering: optimizeLegibility; font-kerning: normal; font-feature-settings: \"kern\", \"liga\", \"clig\"; -webkit-font-smoothing: antialiased; hyphens: none; {xhd}: {xhb}; }}\n", mi = Var::measure_inline().def(), m = Var::measure().get(), aw = Var::avg_advance().get(), mir = Var::measure_inline().get(), pad = pad, xhd = Var::xh_doc().def(), xhb = Var::xh(b).get()));
         layout.push_str(".cascade *, .cascade *::before, .cascade *::after { box-sizing: border-box; }\n");
         layout.push_str(".cascade > *:last-child { margin-bottom: 0; }\n");
         layout.push_str(".cascade :is(h1, h2, h3, h4):first-child { margin-top: 0; }\n");
@@ -772,9 +796,13 @@ impl Renderer for Css {
         layout.push_str(&format!(".cascade a:hover {{ color: {}; text-decoration-thickness: 2px; }}\n", Var::color("link-hover").get()));
         layout.push_str(&format!(".cascade a:focus-visible {{ outline: 2px solid {}; outline-offset: 2px; border-radius: 1px; }}\n", Var::color("accent").get()));
         // code: the mono category optical, applied as overrides (definitions) so the leading/tracking
-        // formulas re-resolve for the code subtree; + inline/block chrome.
-        layout.push_str(&format!(".cascade code, .cascade kbd, .cascade samp, .cascade pre {{ letter-spacing: 0; word-spacing: normal; {}: {mono_xh}; {}: {mono_kt}; {}: {mono_lb}; }}\n", Var::xh(b).def(), Var::kt(b).def(), Var::lb(b).def()));
-        layout.push_str(".cascade :not(pre) > code { font-size: 0.92em; padding: 0.1em 0.34em; border-radius: 3px; }\n");
+        // formulas re-resolve for the code subtree; + inline/block chrome. `font-size-adjust` pins the
+        // mono's rendered x-height to the DOCUMENT body's (`--cf-xh-doc`): a monospace face carries a
+        // larger x-height than a text face, so at an equal em it reads oversized in running prose. This
+        // normalises apparent size across families (and across whatever the mono fallback resolves to),
+        // which is why inline code needs no hand-tuned em fudge -- the x-height match supplies it.
+        layout.push_str(&format!(".cascade code, .cascade kbd, .cascade samp, .cascade pre {{ letter-spacing: 0; word-spacing: normal; font-size-adjust: {}; {}: {}; {}: {}; {}: {}; }}\n", Var::xh_doc().get(), Var::xh(b).def(), Var::code_xh().get(), Var::kt(b).def(), Var::code_kt().get(), Var::lb(b).def(), Var::code_lb().get()));
+        layout.push_str(".cascade :not(pre) > code { padding: 0.1em 0.34em; border-radius: 3px; }\n");
         layout.push_str(&format!(".cascade pre {{ font-size: {}; line-height: {}; padding: 1em; border-radius: 4px; overflow-x: auto; }}\n", Var::size(0).get(), Var::lead(b, 0).get()));
         layout.push_str(".cascade pre code { background: none; padding: 0; font-size: inherit; }\n");
         // quote
@@ -789,8 +817,17 @@ impl Renderer for Css {
         layout.push_str(&format!(".cascade figcaption {{ text-align: center; margin-top: {}; }}\n", Var::space("0").get()));
         // divider
         layout.push_str(&format!(".cascade hr {{ border: 0; block-size: 0; border-top: 0.5px solid {}; }}\n", Var::color(border(Role::Divider)).get()));
-        // footnotes
+        // footnotes: the styled endnotes REGION (above) + the standard author-placed reference
+        // markers and back-links. This is NOT a switchable mode like the side/margin notes -- it is
+        // plain styling for the conventional markup (a `.footnote-ref`/[role="doc-noteref"] anchor,
+        // usually wrapping a <sup> number, in the text; an <ol> of notes in the region, each ending
+        // in a `.footnote-back`/[role="doc-backlink"] anchor). Numbering comes from the markup / the
+        // <ol>, not CSS counters, so it composes with the auto-numbered side/margin notes rather
+        // than competing with them. (Author-placed because pure CSS can't collect inline notes to
+        // the page foot on screen -- that's Paged-Media `float: footnote`, i.e. the Typst renderer.)
         layout.push_str(&format!(".cascade .footnotes, .cascade [role=\"doc-endnotes\"] {{ border-top: 0.5px solid {}; padding-top: {}; margin-top: {}; }}\n", Var::color(border(Role::Footnotes)).get(), Var::space("p1").get(), Var::space("p4").get()));
+        layout.push_str(&format!(".cascade .footnote-ref, .cascade [role=\"doc-noteref\"] {{ color: {}; text-decoration: none; }}\n", Var::color("link").get()));
+        layout.push_str(&format!(".cascade .footnote-back, .cascade [role=\"doc-backlink\"] {{ color: {}; text-decoration: none; margin-inline-start: 0.35em; }}\n", Var::color("link").get()));
 
         // sidenotes.css — the opt-in notes feature; presentation only, cascade tokens via Var.
         let sidenotes = SidenotesCss {
@@ -1001,6 +1038,10 @@ mod tests {
         // multi-element roles fan out to prefixed selectors; theme colour combined in.
         assert!(layout.contains(".cascade strong, .cascade b { font-weight: 700; }"));
         assert!(layout.contains(".cascade a { text-decoration: underline; color: var(--ct-link); }"));
+        // footnotes: the styled endnotes region + the author-placed reference marker + back-link.
+        assert!(layout.contains(".cascade .footnotes, .cascade [role=\"doc-endnotes\"] { border-top:"));
+        assert!(layout.contains(".cascade .footnote-ref, .cascade [role=\"doc-noteref\"] { color: var(--ct-link); text-decoration: none; }"));
+        assert!(layout.contains(".cascade .footnote-back, .cascade [role=\"doc-backlink\"] { color: var(--ct-link); text-decoration: none; margin-inline-start: 0.35em; }"));
     }
 
     #[test]
@@ -1072,10 +1113,10 @@ mod tests {
     #[test]
     fn renders_font_optical_model() {
         let font = out("optical.css");
-        // families per font-role: body = Inter, heading = Lora, code = generic mono (the spec split)
+        // families per font-role: body = Inter, heading = Lora, code = the bundled mono (IBM Plex Mono)
         assert!(font.contains("--cf-family-body:    \"Inter\", system-ui, -apple-system, sans-serif;"));
         assert!(font.contains("--cf-family-heading: \"Lora\", Georgia, \"Times New Roman\", serif;"));
-        assert!(font.contains("--cf-family-code:    \"DejaVu Sans Mono\","));
+        assert!(font.contains("--cf-family-code:    \"IBM Plex Mono\", ui-monospace, SFMono-Regular, monospace;"));
         // body optical from the body font (Inter), heading optical from the heading font (Lora)
         assert!(font.contains("--cf-xh: 0.546;")); // Inter
         assert!(font.contains("--cf-h-xh: 0.5;")); // Lora
@@ -1093,16 +1134,20 @@ mod tests {
 
     #[test]
     fn every_font_control_option_has_a_class() {
-        // Each body/heading dropdown option in the site must map to a real class the renderer emits.
+        // Each body/heading/code dropdown option in the site must map to a real class the renderer
+        // emits. All three roles are swappable, so all three switch families exist for every option.
         let optical = out("optical.css");
         let typefaces = out("typefaces.css");
         for cat in ["serif", "sans", "mono"] {
-            assert!(optical.contains(&format!(".cascade.bundle-{cat} {{")), "missing bundle-{cat}");
-            assert!(optical.contains(&format!(".cascade.heading-{cat} {{")), "missing heading-{cat}");
+            for role in ["bundle", "heading", "code"] {
+                assert!(optical.contains(&format!(".cascade.{role}-{cat} {{")), "missing {role}-{cat}");
+            }
         }
-        for font in ["inter", "lora"] {
-            assert!(typefaces.contains(&format!(".cascade.bundle-{font} {{")), "missing bundle-{font}");
-            assert!(typefaces.contains(&format!(".cascade.heading-{font} {{")), "missing heading-{font}");
+        // Every bundled Font emits a bundle/heading/code class; multi-word families slugify to one token.
+        for font in ["inter", "lora", "ibmplexmono"] {
+            for role in ["bundle", "heading", "code"] {
+                assert!(typefaces.contains(&format!(".cascade.{role}-{font} {{")), "missing {role}-{font}");
+            }
         }
     }
 }
