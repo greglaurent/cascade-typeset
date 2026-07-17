@@ -1,0 +1,22 @@
+[package]
+name = "cascade-site"
+version = "0.1.0"
+edition = "2021"
+
+# The public cascade site. A CONSUMER of the cascade typography library (a sibling crate in this
+# workspace): it depends on cascade-css and renders the CSS IN-MEMORY via its API
+# (`Css::render(&Config)`) -- live, any config, no vendored files. Stack mirrors wine-app: Axum +
+# Askama + datastar + Vite + Pico, minus the stateful half (no Postgres, no wasm/offline).
+[dependencies]
+cascade = { path = "../cascade" }
+cascade-css = { path = "../cascade-css" }
+
+axum = "0.7"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+tower-http = { version = "0.6", features = ["fs", "compression-gzip", "trace"] }
+askama = "0.12"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"

@@ -1,0 +1,51 @@
+/* Site chrome only -- the control bar. The specimen (.cascade) is styled entirely by the cascade
+   stylesheet; these rules cover the surrounding UI. Colours borrow the cascade theme tokens (from
+   /css/cascade.css) so the chrome tracks the active palette. */
+
+body {
+  margin: 0;
+  background: var(--ct-bg, #f6f2e9);
+  color: var(--ct-fg, #171717);
+}
+
+.controls {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  padding: 0.6rem 1.25rem;
+  background: var(--ct-bg-subtle, #efe9dc);
+  border-bottom: 1px solid var(--ct-rule, #c4bdb0);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.85rem;
+}
+
+.controls .brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-right: 0.25rem;
+}
+
+/* Keep Pico's block-level form controls inline and compact inside the bar. */
+.controls label {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin: 0;
+}
+
+.controls select {
+  width: auto;
+  margin: 0;
+  height: auto;
+  padding: 0.15rem 1.6rem 0.15rem 0.5rem;
+  font: inherit;
+}
+
+/* The specimen sits in the normal flow below the sticky bar; give it breathing room. */
+#doc {
+  margin-block: 2rem;
+}

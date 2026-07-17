@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ title }}{% endblock %}</title>
+    <link rel="icon" href="/favicon.svg" />
+    <!-- The cascade stylesheet, rendered in-memory by the server via the cascade-css API. -->
+    <link rel="stylesheet" href="/css/cascade.css" />
+    {% if !site_css.is_empty() %}<link rel="stylesheet" href="{{ site_css }}" />{% endif %}
+    {% if !site_js.is_empty() %}<script type="module" src="{{ site_js }}"></script>{% endif %}
+  </head>
+  <body>
+    {% block content %}{% endblock %}
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "cascade-web",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "vendor": "node scripts/vendor.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "prebuild": "node scripts/vendor.ts",
+    "build": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && vite build",
+    "watch": "node scripts/vendor.ts && vite build --watch"
+  },
+  "dependencies": {
+    "@picocss/pico": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0"
+  }
+}

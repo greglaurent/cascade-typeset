@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <link rel="icon" href="/favicon.svg">
+  <!-- cascade's colour tokens (--ct-*): the chrome reuses --ct-bg (iframe ground) and
+       --ct-accent (focus ring) straight from the library, no copies. -->
+  <link rel="stylesheet" href="/css/cascade.css">
+  <!-- Pico (from the Vite bundle) -- loaded to prove the cascade specimen coexists with another
+       CSS library on the same site. The chrome CSS below overrides Pico for the header controls. -->
+  {% if !site_css.is_empty() %}<link rel="stylesheet" href="{{ site_css }}">{% endif %}
+  <style>
+    :root {
+      color-scheme: light dark;
+      /* Chrome palette -- warm-neutral, viewer-only (not part of the cascade library). */
+      --ui-bg: #EDEAE3; --ui-fg: #2A2723; --ui-bg-panel: #F6F2E9;
+      --ui-border: #C9C3B8; --ui-border-strong: #9A9388; --ui-shadow: #2A272340;
+    }
+    [data-theme="dark"] {
+      --ui-bg: #100E0B; --ui-fg: #DDD8CF; --ui-bg-panel: #1A1713;
+      --ui-border: #3D3830; --ui-border-strong: #565046; --ui-shadow: #00000080;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { display: flex; flex-direction: column; font: 14px/1.4 system-ui, sans-serif; background: var(--ui-bg); color: var(--ui-fg); }
+    header {
+      flex: none; display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.6rem 1rem; border-bottom: 1px solid var(--ui-border);
+      background: var(--ui-bg); color: var(--ui-fg);
+    }
+    .name { font-weight: 600; letter-spacing: -0.01em; margin-right: auto; }
+    .name small { font-weight: 400; opacity: 0.55; }
+
+    /* Pico (loaded to prove coexistence) gives buttons/details/summary a spacing margin; neutralise
+       it in the header so the custom flex layout stays on one line. Pico is present, the chrome still
+       lays out cleanly -- that reconciliation is the site's job, not Pico's fault. */
+    header > *, .tabs > *, .panel > * { margin: 0; }
+    header select, header button, header summary { margin: 0; }
+
+    .menu { position: relative; }
+    .menu[hidden] { display: none; }
+    .menu > summary {
+      list-style: none; cursor: pointer; user-select: none;
+      padding: 0.35rem 0.9rem; border: 1px solid var(--ui-border-strong); border-radius: 6px;
+    }
+    .menu > summary::-webkit-details-marker { display: none; }
+    .menu > summary::after { content: "\25BE"; opacity: 0.6; display: inline; position: static; background: none; width: auto; height: auto; transform: none; padding: 0; margin: 0 0 0 0.45em; }
+    .menu[open] > summary { background: var(--ui-fg); color: var(--ui-bg-panel); border-color: var(--ui-fg); margin: 0; }
+    .menu .panel {
+      position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 10;
+      display: grid; gap: 0.45rem; padding: 0.7rem; min-width: 15rem;
+      background: var(--ui-bg-panel); color: var(--ui-fg);
+      border: 1px solid var(--ui-border-strong); border-radius: 8px; box-shadow: 0 8px 24px var(--ui-shadow);
+    }
+    .panel label { display: grid; grid-template-columns: 4rem 1fr; align-items: center; gap: 0.5rem; margin: 0; }
+    .panel select { font: inherit; width: auto; margin: 0; }
+
+    .tabs { display: flex; gap: 0.4rem; }
+    .tab {
+      appearance: none; cursor: pointer; font: inherit;
+      padding: 0.35rem 0.9rem; border-radius: 6px;
+      border: 1px solid var(--ui-border-strong); background: transparent; color: inherit;
+    }
+    .tab[aria-selected="true"] { background: var(--ui-fg); color: var(--ui-bg-panel); border-color: var(--ui-fg); }
+
+    .compile {
+      appearance: none; cursor: pointer; font: inherit;
+      padding: 0.35rem 0.9rem; border-radius: 6px;
+      border: 1px solid var(--ui-border-strong); background: transparent; color: inherit;
+    }
+    .compile[hidden] { display: none; }
+    .compile:not(:disabled):hover { border-color: var(--ui-fg); }
+    .compile:disabled { opacity: 0.45; cursor: default; }
+
+    .theme-toggle {
+      appearance: none; cursor: pointer; display: grid; place-items: center;
+      inline-size: 2rem; block-size: 2rem; padding: 0; margin: 0 0 0 0.1rem;
+      border: 1px solid var(--ui-border-strong); border-radius: 6px; background: transparent; color: inherit;
+    }
+    .theme-toggle:hover { border-color: var(--ui-fg); }
+    .theme-toggle svg { inline-size: 1.15rem; block-size: 1.15rem; display: block; }
+
+    .menu > summary:focus-visible,
+    .tab:focus-visible,
+    .compile:focus-visible,
+    .theme-toggle:focus-visible { outline: 2px solid var(--ct-accent); outline-offset: 2px; }
+
+    iframe { flex: 1; width: 100%; border: 0; background: var(--ct-bg); }
+  </style>
+  {% if !site_js.is_empty() %}<script type="module" src="{{ site_js }}"></script>{% endif %}
+</head>
+<body>
+<header>
+  <div class="name">Cascade Typeset <small>examples</small></div>
+
+  <details class="menu" id="opts">
+    <summary>Options</summary>
+    <div class="panel">
+      <label>scale
+        <select id="sel-scale">
+          <option value="scale-classical">classical</option>
+          <option value="scale-golden-ratio">golden-ratio</option>
+          <option value="scale-golden-ditonic" selected>golden-ditonic</option>
+          <option value="scale-tritonic">tritonic</option>
+          <option value="scale-tetratonic">tetratonic</option>
+          <option value="scale-major-third">major-third</option>
+          <option value="scale-minor-third">minor-third</option>
+        </select>
+      </label>
+      <label>body
+        <select id="sel-style">
+          <option value="bundle-serif" selected>serif</option>
+          <option value="bundle-sans">sans</option>
+          <option value="bundle-mono">mono</option>
+          <option value="bundle-lora">Lora</option>
+          <option value="bundle-inter">Inter</option>
+          <option value="bundle-jost">Jost</option>
+        </select>
+      </label>
+      <label>heading
+        <select id="sel-heading">
+          <option value="" selected>match body</option>
+          <option value="heading-serif">serif</option>
+          <option value="heading-sans">sans</option>
+          <option value="heading-mono">mono</option>
+          <option value="heading-lora">Lora</option>
+          <option value="heading-inter">Inter</option>
+          <option value="heading-jost">Jost</option>
+        </select>
+      </label>
+      <label>notes
+        <select id="sel-notes">
+          <option value="banded" selected>banded (Tufte)</option>
+          <option value="centered">centered</option>
+        </select>
+      </label>
+    </div>
+  </details>
+
+  <button class="compile" id="compile" type="button" hidden>Compile</button>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-src="/sample" aria-selected="true">CSS</button>
+    <button class="tab" role="tab" data-src="/sample.pdf" aria-selected="false">Typst (PDF)</button>
+  </div>
+
+  <button class="theme-toggle" id="theme-toggle" type="button" title="Toggle light / dark"></button>
+</header>
+
+<iframe id="view" title="example"></iframe>
+</body>
+</html>
