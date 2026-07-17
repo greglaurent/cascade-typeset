@@ -367,6 +367,7 @@ version = "0.1.0"
 dependencies = [
  "cascade",
  "cascade-css",
+ "cascade-typst",
  "clap",
  "serde",
  "serde_json",
@@ -404,6 +405,7 @@ dependencies = [
 name = "cascade-typst"
 version = "0.1.0"
 dependencies = [
+ "askama 0.16.0",
  "cascade",
 ]
 

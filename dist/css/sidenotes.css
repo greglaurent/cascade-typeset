@@ -39,36 +39,44 @@ input.margin-toggle { display: none; }
   color: var(--ct-link); margin-inline: var(--sn-mark-space);
 }
 
-/* ── Disclosure (shared). Notes hide; any checked marker opens them ALL via :has(). ── */
+/* ── Disclosure. Notes hide by default. A standalone marker opens ONLY its own adjacent note
+ *    (per-note toggle). Markers wrapped together in a `.note-group` (a back-to-back run like "2 3")
+ *    open as a SET: any checked marker in the group shows every note in it. So ungrouped markers
+ *    are individual; grouped ones work together. ── */
 .cascade.sidenotes .sidenote,
 .cascade.sidenotes .marginnote { display: none; }
-.cascade.sidenotes:has(.margin-toggle:checked) .sidenote,
-.cascade.sidenotes:has(.margin-toggle:checked) .marginnote {
+.cascade.sidenotes .margin-toggle:checked + .sidenote,
+.cascade.sidenotes .margin-toggle:checked + .marginnote,
+.cascade.sidenotes .note-group:has(.margin-toggle:checked) .sidenote,
+.cascade.sidenotes .note-group:has(.margin-toggle:checked) .marginnote {
   display: block;
   margin: var(--sn-gap) 0 var(--cr-baseline);
   padding-inline-start: var(--sn-indent);
   border-inline-start: 2px solid var(--ct-rule);
 }
 
-/* ── Note group — transparent by default (float works, DOM order preserved), a flex block
- *    when opened (markers cluster, bodies stack; numbering untouched). ── */
+/* ── Note group — transparent by default (float works, DOM order preserved), a flex block when it
+ *    has an open note (markers cluster, bodies stack; numbering untouched). ── */
 .note-group { display: contents; }
-.cascade.sidenotes:has(.margin-toggle:checked) .note-group {
+.cascade.sidenotes .note-group:has(.margin-toggle:checked) {
   display: flex; flex-wrap: wrap; align-items: baseline;
   gap: var(--sn-gap) 0;
   margin: var(--sn-gap) 0 var(--cr-baseline);
 }
-.cascade.sidenotes:has(.margin-toggle:checked) .note-group > .sidenote-number { order: 0; }
-.cascade.sidenotes:has(.margin-toggle:checked) .note-group > .sidenote { order: 1; flex-basis: 100%; margin: 0; }
+.cascade.sidenotes .note-group:has(.margin-toggle:checked) > .sidenote-number { order: 0; }
+.cascade.sidenotes .note-group:has(.margin-toggle:checked) > .sidenote { order: 1; flex-basis: 100%; margin: 0; }
 
-/* ── Banded, wide (≥62rem): offset column + notes floated into the band. ── */
+/* ── Banded, wide (≥62rem): offset column + notes floated into the band. The band spans the
+ *    content + note margin, but the TEXT column stays bound to the reading measure (the same
+ *    single-sourced value the centered column uses) — turning on margin notes must not widen the
+ *    line past a comfortable measure. So the text column is min(its band share, the measure). ── */
 @media (min-width: 62rem) {
   .cascade.sidenotes.banded {
     box-sizing: content-box; max-inline-size: none;
     width: var(--sn-band-width); margin-inline: auto;
     padding-left: var(--sn-offset); padding-right: 0;
   }
-  .cascade.sidenotes.banded > *:not(.sidenote):not(.marginnote) { width: var(--sn-text); max-inline-size: none; }
+  .cascade.sidenotes.banded > *:not(.sidenote):not(.marginnote) { width: var(--sn-text); max-inline-size: min(100%, var(--cf-measure-inline)); }
   .cascade.sidenotes.banded .sidenote,
   .cascade.sidenotes.banded .marginnote,
   .cascade.sidenotes.banded:has(.margin-toggle:checked) .sidenote,

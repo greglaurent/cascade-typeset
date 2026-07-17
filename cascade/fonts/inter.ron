@@ -3,5 +3,5 @@
     name: "Inter",
     category: sans,
     profile:  (optical_size: "12pt", k_tracking: 0.03, leading_base: 1.45, word_space: 0.26),
-    measured: (x_height: 0.546, cap_height: 0.728, avg_advance: 0.4714, units_per_em: 2048, sx: "sxHeight 1118", asc: "0.969", desc: "-0.241"),
+    measured: (x_height: 0.546, cap_height: 0.728, avg_advance: 0.4770, units_per_em: 2048, sx: "sxHeight 1118", asc: "0.969", desc: "-0.241"),
 )

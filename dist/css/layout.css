@@ -26,7 +26,7 @@
 .cascade hr { margin: var(--cr-space-p4) 0 var(--cr-space-p4); }
 
 /* ── representation: box model, states, chrome (cascade-css behaviour) ── */
-.cascade { box-sizing: border-box; max-inline-size: calc(var(--cf-measure) * 1ch); margin-inline: auto; padding: var(--cr-space-p5); text-rendering: optimizeLegibility; font-kerning: normal; font-feature-settings: "kern", "liga", "clig"; -webkit-font-smoothing: antialiased; hyphens: none; }
+.cascade { box-sizing: border-box; --cf-measure-inline: calc(var(--cf-measure) * var(--cf-aw) * 1em); max-inline-size: min(100%, calc(var(--cf-measure-inline) + 2 * var(--cr-space-p5))); margin-inline: auto; padding: var(--cr-space-p5); text-rendering: optimizeLegibility; font-kerning: normal; font-feature-settings: "kern", "liga", "clig"; -webkit-font-smoothing: antialiased; hyphens: none; --cf-xh-doc: var(--cf-xh); }
 .cascade *, .cascade *::before, .cascade *::after { box-sizing: border-box; }
 .cascade > *:last-child { margin-bottom: 0; }
 .cascade :is(h1, h2, h3, h4):first-child { margin-top: 0; }
@@ -35,8 +35,8 @@
 .cascade a:visited { color: var(--ct-link-visited); }
 .cascade a:hover { color: var(--ct-link-hover); text-decoration-thickness: 2px; }
 .cascade a:focus-visible { outline: 2px solid var(--ct-accent); outline-offset: 2px; border-radius: 1px; }
-.cascade code, .cascade kbd, .cascade samp, .cascade pre { letter-spacing: 0; word-spacing: normal; --cf-xh: 0.535; --cf-kt: 0; --cf-lb: 1.5; }
-.cascade :not(pre) > code { font-size: 0.92em; padding: 0.1em 0.34em; border-radius: 3px; }
+.cascade code, .cascade kbd, .cascade samp, .cascade pre { letter-spacing: 0; word-spacing: normal; font-size-adjust: var(--cf-xh-doc); --cf-xh: var(--cf-code-xh); --cf-kt: var(--cf-code-kt); --cf-lb: var(--cf-code-lb); }
+.cascade :not(pre) > code { padding: 0.1em 0.34em; border-radius: 3px; }
 .cascade pre { font-size: var(--cs-size-0); line-height: var(--cf-lead-0); padding: 1em; border-radius: 4px; overflow-x: auto; }
 .cascade pre code { background: none; padding: 0; font-size: inherit; }
 .cascade blockquote { padding: var(--cr-space-p1) 2em; border-inline-start: 3px solid var(--ct-quote-rule); }
@@ -48,3 +48,5 @@
 .cascade figcaption { text-align: center; margin-top: var(--cr-space-0); }
 .cascade hr { border: 0; block-size: 0; border-top: 0.5px solid var(--ct-rule); }
 .cascade .footnotes, .cascade [role="doc-endnotes"] { border-top: 0.5px solid var(--ct-rule); padding-top: var(--cr-space-p1); margin-top: var(--cr-space-p4); }
+.cascade .footnote-ref, .cascade [role="doc-noteref"] { color: var(--ct-link); text-decoration: none; }
+.cascade .footnote-back, .cascade [role="doc-backlink"] { color: var(--ct-link); text-decoration: none; margin-inline-start: 0.35em; }

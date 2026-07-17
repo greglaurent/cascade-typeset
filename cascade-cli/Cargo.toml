@@ -19,6 +19,7 @@ path = "src/main.rs"
 # only the file IO). So the "how a font is measured" definition lives in the spec, not here.
 cascade = { path = "../cascade", features = ["measure"] }
 cascade-css = { path = "../cascade-css" }
+cascade-typst = { path = "../cascade-typst" }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 # Consumer-facing config + the output manifest — familiar formats, read/written with serde.

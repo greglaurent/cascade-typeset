@@ -27,9 +27,25 @@ in one command:
 
     cargo run -p cascade-cli -- measure cascade/fonts/sources     # → inter.ron, lora.ron, ibmplexmono.ron
 
-This is idempotent — byte-identical to what's committed — and preserves each font's tuned `profile`.
-(`build.rs` scans only `*.ron` at this folder's top level, so `sources/`, this README, and the
-`.OFL.txt` files are ignored by the spec compile.)
+Idempotent, and preserves each font's tuned `profile`. `sources/` holds the **variable** fonts —
+`measure_face` samples them: it pins the optical axis to its text end and averages the weight axis
+(a bold-skewed Gaussian prior over the wght range, `m* = pᵀM`), since x-height/cap are weight-
+invariant and only the advance drifts. So the measured metric is a robust family value, not one
+arbitrary instance. (`build.rs` scans only `*.ron` at this folder's top level, so `sources/`,
+`faces/`, this README, and the `.OFL.txt` files are ignored by the spec compile.)
+
+## `faces/` — static delivery faces (for Typst)
+
+`faces/` holds **static** instances (Regular/SemiBold/Bold + italics) for renderers that can't use a
+variable font — Typst 0.14 renders a `weight: 700` request from a variable file at *regular*. The CSS
+path uses the variable sources directly (`@font-face`); the Typst dist ships these static faces
+(`cascade build --target typst` / `dist` copies them to `dist/typst/fonts`, compiled with
+`--font-path fonts`). They are instanced from the variable sources (opsz pinned to text), e.g.:
+
+    fonttools varLib.instancer sources/lora.ttf wght=700 -o faces/Lora-Bold.ttf
+
+Metrics come from the variable measurement above (weight-invariant), so the statics are delivery
+only — never separately measured.
 
 ## Add / update a bundled font
 

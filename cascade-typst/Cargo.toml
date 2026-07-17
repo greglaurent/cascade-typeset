@@ -3,8 +3,10 @@ name = "cascade-typst"
 version = "0.1.0"
 edition = "2024"
 
-# A Renderer implementation for Typst (print / PDF). STUB: it builds and satisfies the protocol's
-# `Renderer` contract so the workspace stays green and the shape is fixed, but the real projection
-# and `typst compile` verification are TODO (see src/lib.rs). Depends only on the protocol.
+# A Renderer implementation for Typst (print / PDF). Projects the spec's formulas over f64 (the
+# numeric side of the dual projection) and BAKES concrete values into Typst source; `verify` shells
+# out to the `typst` CLI to compile the output. Depends on the protocol + askama (template engine,
+# same as cascade-css).
 [dependencies]
+askama = "0.16.0"
 cascade = { path = "../cascade" }

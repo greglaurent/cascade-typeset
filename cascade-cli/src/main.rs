@@ -43,8 +43,9 @@ enum Cmd {
 
 #[derive(Args)]
 struct Dist {
-    /// Output directory for the committed distribution (created if missing).
-    #[arg(long, default_value = "dist/css")]
+    /// Output directory for the committed distribution (created if missing). Each renderer's output
+    /// lands in a `<format>/` subdir (`dist/css`, `dist/typst`).
+    #[arg(long, default_value = "dist")]
     out: PathBuf,
 }
 
@@ -236,7 +237,9 @@ fn build(b: Build) -> Res {
             }
             return Err(msg.into());
         }
-        println!("verified: {} {} file(s) — valid CSS, no dangling references", renderer.name(), outputs.len());
+        // The renderer verified with its OWN medium's tooling (CSS: browser-grade parse + dangling
+        // var() check; Typst: `typst compile`) — so the message stays generic across targets.
+        println!("verified: {} {} file(s) — no problems reported", renderer.name(), outputs.len());
     }
 
     std::fs::create_dir_all(&b.out)?;
@@ -326,27 +329,63 @@ fn build(b: Build) -> Res {
 }
 
 // ── dist ───────────────────────────────────────────────────────────────────────────────────
-// The release step (was the top-level justfile's `dist`): build the committed CSS distribution to
-// dist/css, VERIFIED, then stamp the spec's VERSION and drop the build manifest (an internal clean
-// aid, not part of a shipped artifact). One command, no shelling out, version straight from the crate.
+// The release step (was the top-level justfile's `dist`): build the committed distribution for every
+// renderer to dist/<format>, VERIFIED, then stamp the spec's VERSION and drop the build manifest (an
+// internal clean aid, not part of a shipped artifact). One command, no shelling out, version straight
+// from the crate. Typst additionally gets the static faces it needs to render (it can't weight a
+// variable font), shipped under dist/typst/fonts — the consumer compiles with `--font-path fonts`.
+const FACES_DIR: &str = "cascade/fonts/faces";
+
 fn dist(d: Dist) -> Res {
-    build(Build {
-        out: d.out.clone(),
-        target: "css".into(),
-        config: None,
-        scale: None,
-        body: None,
-        heading: None,
-        code: None,
-        font_path: vec![],
-        link_fonts: false,
-        theme: None,
-        verify: true,
-    })?;
-    let _ = std::fs::remove_file(d.out.join(MANIFEST)); // shipped artifact: no internal manifest
-    std::fs::write(d.out.join("VERSION"), format!("cascade {}\n", cascade::VERSION))?;
+    for (target, sub) in [("css", "css"), ("typst", "typst")] {
+        let out = d.out.join(sub);
+        build(Build {
+            out: out.clone(),
+            target: target.into(),
+            config: None,
+            scale: None,
+            body: None,
+            heading: None,
+            code: None,
+            font_path: vec![],
+            link_fonts: false,
+            theme: None,
+            verify: true,
+        })?;
+        let _ = std::fs::remove_file(out.join(MANIFEST)); // shipped artifact: no internal manifest
+        std::fs::write(out.join("VERSION"), format!("cascade {}\n", cascade::VERSION))?;
+    }
+    // Ship the static delivery faces with the Typst output (Typst renders from real weights/styles).
+    let faces_out = d.out.join("typst").join("fonts");
+    match ship_faces(&faces_out) {
+        Ok(n) if n > 0 => println!("  typst: bundled {n} static face(s) → {}", faces_out.display()),
+        Ok(_) => eprintln!("  note: no static faces at {FACES_DIR}; Typst output needs fonts via --font-path"),
+        Err(e) => eprintln!("  warning: could not bundle Typst faces: {e}"),
+    }
     println!("built distribution {} (cascade {})", d.out.display(), cascade::VERSION);
     Ok(())
+}
+
+/// Copy the bundled static `.ttf` delivery faces into `out`. Returns how many were copied (0 if the
+/// faces dir is absent — e.g. run outside the repo). The release step runs in-repo, so [`FACES_DIR`]
+/// is the vendored set.
+fn ship_faces(out: &std::path::Path) -> Result<usize, Box<dyn std::error::Error>> {
+    let src = std::path::Path::new(FACES_DIR);
+    if !src.is_dir() {
+        return Ok(0);
+    }
+    std::fs::create_dir_all(out)?;
+    let mut n = 0;
+    for entry in std::fs::read_dir(src)? {
+        let path = entry?.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("ttf") {
+            if let Some(name) = path.file_name() {
+                std::fs::copy(&path, out.join(name))?;
+                n += 1;
+            }
+        }
+    }
+    Ok(n)
 }
 
 /// Overlay flags onto the file onto the compiled defaults; resolve every name against its closed
@@ -486,9 +525,8 @@ fn parse_theme(s: &str) -> Result<Theme, String> {
 fn renderer_for(target: &str) -> Result<Box<dyn Renderer>, String> {
     match target {
         "css" => Ok(Box::new(cascade_css::Css)),
-        // TODO(typst): add `"typst" => Ok(Box::new(cascade_typst::Typst))` once its render/verify
-        // are implemented (they're todo!() stubs today), and add cascade-typst as a dependency.
-        other => Err(format!("unknown target '{other}'. available: css")),
+        "typst" => Ok(Box::new(cascade_typst::Typst)),
+        other => Err(format!("unknown target '{other}'. available: css, typst")),
     }
 }
 

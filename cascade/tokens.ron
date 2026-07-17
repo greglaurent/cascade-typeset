@@ -34,6 +34,14 @@
         tracking_clamp: 0.04,
         leading_clamp: (min: 1.2, max: 1.5), // max 1.5 = WCAG 1.4.12 body line-height / top of the ideal band
         measure: 65,
+        // SPEC-OWNED typographic decisions every renderer MUST use identically — not renderer-local.
+        // base_pt: the reading size (scale step 0). CSS anchors its fluid clamp to it; print uses it
+        //   fixed. size_min_pt: the readability floor small roles clamp up to. rhythm_unit_ratio: the
+        //   vertical-rhythm unit as a fraction of the base (unit = base * ratio); spacing tokens are
+        //   multiples of it. Holding these here makes cross-renderer divergence impossible.
+        base_pt: 11.0,
+        size_min_pt: 9.0,
+        rhythm_unit_ratio: 0.375,
     ),
     // Per-CATEGORY default optical tuning — the baseline for the GENERIC case, when no
     // specific font is selected (generic serif / sans / mono). A selected font OVERRIDES

@@ -1,10 +1,15 @@
 /* cascade-css — optical.css (generated from the spec) */
 .cascade {
-  /* families per font-role: body and heading are independent typefaces (from the spec's
-     default_fonts); code is the generic mono family. */
+  /* families per font-role: body, heading and code are independent typefaces (from the spec's
+     default_fonts), each with its own measured optical. */
   --cf-family-body:    "Inter", system-ui, -apple-system, sans-serif;
   --cf-family-heading: "Lora", Georgia, "Times New Roman", serif;
-  --cf-family-code:    "DejaVu Sans Mono", ui-monospace, SFMono-Regular, monospace;
+  --cf-family-code:    "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* generic font stacks per category — targets for the bundle/heading/code-serif|sans|mono switches */
+  --cf-font-serif: Georgia, "Times New Roman", serif;
+  --cf-font-sans:  system-ui, -apple-system, sans-serif;
+  --cf-font-mono:  ui-monospace, SFMono-Regular, monospace;
 
   /* body optical params (from the body font) */
   --cf-xh: 0.546;
@@ -16,6 +21,7 @@
   --cf-lmin: 1.2;
   --cf-lmax: 1.5;
   --cf-measure: 65;
+  --cf-aw: 0.477;
   --cf-size-min: 0.7500rem;
   --cf-lead0: calc(var(--cf-lb) + (var(--cf-measure) - 65) * 0.006 - (var(--cf-xh) - 0.5) * 0.8);
 
@@ -25,6 +31,11 @@
   --cf-h-lb: 1.38;
   --cf-h-bws: 0.28;
   --cf-h-lead0: calc(var(--cf-h-lb) + (var(--cf-measure) - 65) * 0.006 - (var(--cf-h-xh) - 0.5) * 0.8);
+
+  /* code optical params (from the code font) — the code subtree binds these; a .code-* switch swaps them */
+  --cf-code-xh: 0.516;
+  --cf-code-kt: 0;
+  --cf-code-lb: 1.5;
 
   /* body tracking per step (em) — formula::tracking, projected */
   --cf-track-n5: calc(clamp(-1 * var(--cf-tc), -1 * var(--cf-kt) * (-5 / var(--cs-n)) * var(--cs-ln-ratio), var(--cf-tc)) * 1em);
@@ -80,7 +91,14 @@
   --cf-h-ws-p4: calc((var(--cf-h-bws) - var(--cf-kws) * (4 / var(--cs-n)) * var(--cs-ln-ratio)) * 1em);
 }
 
-/* per-category default optical baselines (generic serif/sans/mono) — class on the .cascade box */
-.cascade.profile-serif { --cf-xh: 0.49; --cf-kt: 0.022; --cf-lb: 1.35; --cf-bws: 0.28; }
-.cascade.profile-sans { --cf-xh: 0.53; --cf-kt: 0.03; --cf-lb: 1.45; --cf-bws: 0.28; }
-.cascade.profile-mono { --cf-xh: 0.535; --cf-kt: 0; --cf-lb: 1.5; --cf-bws: 0; }
+/* generic body + heading bundles (serif/sans/mono) — switch the family to the generic stack and
+   reset the optical to that category's baseline; class on the .cascade box. */
+.cascade.bundle-serif { --cf-family-body: var(--cf-font-serif); --cf-xh: 0.49; --cf-kt: 0.022; --cf-lb: 1.35; --cf-bws: 0.28; --cf-aw: 0.46; }
+.cascade.heading-serif { --cf-family-heading: var(--cf-font-serif); --cf-h-xh: 0.49; --cf-h-kt: 0.022; --cf-h-lb: 1.35; }
+.cascade.code-serif { --cf-family-code: var(--cf-font-serif); --cf-code-xh: 0.49; --cf-code-kt: 0.022; --cf-code-lb: 1.35; }
+.cascade.bundle-sans { --cf-family-body: var(--cf-font-sans); --cf-xh: 0.53; --cf-kt: 0.03; --cf-lb: 1.45; --cf-bws: 0.28; --cf-aw: 0.47; }
+.cascade.heading-sans { --cf-family-heading: var(--cf-font-sans); --cf-h-xh: 0.53; --cf-h-kt: 0.03; --cf-h-lb: 1.45; }
+.cascade.code-sans { --cf-family-code: var(--cf-font-sans); --cf-code-xh: 0.53; --cf-code-kt: 0.03; --cf-code-lb: 1.45; }
+.cascade.bundle-mono { --cf-family-body: var(--cf-font-mono); --cf-xh: 0.535; --cf-kt: 0; --cf-lb: 1.5; --cf-bws: 0; --cf-aw: 0.6; }
+.cascade.heading-mono { --cf-family-heading: var(--cf-font-mono); --cf-h-xh: 0.535; --cf-h-kt: 0; --cf-h-lb: 1.5; }
+.cascade.code-mono { --cf-family-code: var(--cf-font-mono); --cf-code-xh: 0.535; --cf-code-kt: 0; --cf-code-lb: 1.5; }

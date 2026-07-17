@@ -8,9 +8,13 @@ commit the result.
 | Directory | Format | Include |
 |---|---|---|
 | [`css/`](css/) | CSS | `css/cascade.css` (it `@import`s the seven modules) |
-| `typst/` | Typst | pending -- lands with the `cascade-typst` renderer |
+| [`typst/`](typst/) | Typst | `typst/cascade.typ` (`#import "cascade.typ": make`); compile with `--font-path fonts` |
 
-`css/VERSION` records the cascade version the CSS was built from. The build uses the spec's default
-config (golden-ditonic scale, Inter/Lora, paper theme); palette, light/dark, typeface, and scale
-are still switchable at runtime via the classes/attributes the CSS emits. Consumers who need a
-different *baked* default run the CLI themselves (`cascade build --scale ... --out ...`).
+`<format>/VERSION` records the cascade version each was built from. The build uses the spec's default
+config (golden-ditonic scale, Inter/Lora/IBM Plex Mono, paper theme). For **CSS**, palette,
+light/dark, typeface, and scale stay switchable at runtime via the classes/attributes the CSS emits.
+**Typst** is print: there's no runtime, so the config is BAKED (numeric projection of the same spec
+formulas), and `typst/fonts/` ships the static faces Typst needs — it can't weight a variable font,
+so real Regular/SemiBold/Bold + italics are provided (`typst compile --font-path fonts your.typ`).
+Consumers who need a different *baked* default run the CLI themselves (`cascade build --target typst
+--scale ... --out ...`).

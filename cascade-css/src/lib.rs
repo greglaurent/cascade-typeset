@@ -9,24 +9,22 @@ use askama::Template;
 use cascade::formula::{self, Val};
 use cascade::renderer::{Config, FontDelivery, Output, Renderer, ResolvedFont};
 use cascade::{
-    role_color, Category, Color, Font, FontRole, Multiplier, Role, ScalePreset, Semantic,
-    LEADING_CLAMP, MEASURE, STEPS_MAX, STEPS_MIN, TRACKING_CLAMP, WORD_SPACE_K,
+    role_color, Category, Color, Font, FontRole, Multiplier, Role, ScalePreset, Semantic, BASE_PT,
+    LEADING_CLAMP, MEASURE, RHYTHM_UNIT_RATIO, SIZE_MIN_PT, STEPS_MAX, STEPS_MIN, TRACKING_CLAMP,
+    WORD_SPACE_K,
 };
 
 /// cascade-css's default base body size, in points, driven from the user's perspective
-/// (e.g. 11pt) — a renderer default, overridable via the user-input boundary. cascade-css
-/// CALCULATES its fluid clamp from this pt; the spec never holds a base.
-const DEFAULT_BASE_PT: f64 = 11.0;
-/// cascade-css's own fluid parameters (its behavior, like the fallbacks): pt→rem, the
-/// viewport window the base grows across, and how much it grows.
+// The reading size (`BASE_PT`), the rhythm-unit ratio (`RHYTHM_UNIT_RATIO`), and the readability
+// floor (`SIZE_MIN_PT`) are SPEC-OWNED (`cascade::*`), NOT renderer choices — the same values
+// cascade-typst reads, so the two formats cannot diverge on size / rhythm / floor. cascade-css only
+// adds its own CONTEXT on top: it wraps `BASE_PT` in a fluid `clamp()` for the screen.
+/// cascade-css's own fluid parameters (screen-context behavior): pt→rem, the viewport window the
+/// base grows across, and how much it grows. These are legitimately renderer-local (CSS-only).
 const PT_PER_REM: f64 = 12.0; // 12pt = 1rem = 16px at 96dpi
 const FLUID_MIN_VW: f64 = 20.0; // rem (~320px)
 const FLUID_MAX_VW: f64 = 80.0; // rem (~1280px)
 const FLUID_GROWTH: f64 = 1.2;
-/// The grid unit as a fraction of the base — also CSS behavior.
-const CSS_UNIT: f64 = 0.375;
-/// Readability floor for the fluid base clamp — cascade-css's default, overridable.
-const DEFAULT_SIZE_MIN_PT: f64 = 9.0; // → 0.75rem
 
 pub struct Css;
 
@@ -511,7 +509,7 @@ impl Renderer for Css {
             .map(|p| PresetRow { id: p.id(), ratio: p.ratio(), n: p.n() })
             .collect();
         let scale = ScaleCss {
-            base: Self::base_clamp(DEFAULT_BASE_PT),
+            base: Self::base_clamp(BASE_PT),
             default_id: cfg.scale.id(),
             default_ratio: cfg.scale.ratio(),
             default_n: cfg.scale.n(),
@@ -524,7 +522,7 @@ impl Renderer for Css {
         // rhythm.css — the spec's Multiplier; the grid unit's fraction of the base is ours (CSS
         // behaviour). Each spacing token and the baseline route through the spec's rhythm formulas
         // (formula::spacing / formula::baseline) rather than inline arithmetic. `base` → `0`.
-        let unit = format!("calc({} * {CSS_UNIT})", Var::base().get());
+        let unit = format!("calc({} * {RHYTHM_UNIT_RATIO})", Var::base().get());
         let spaces = Multiplier::ALL
             .into_iter()
             .map(|m| {
@@ -662,7 +660,7 @@ impl Renderer for Css {
             lmax: LEADING_CLAMP.1,
             measure: MEASURE,
             aw: cfg.body.avg_advance,
-            size_min: format!("{:.4}rem", DEFAULT_SIZE_MIN_PT / PT_PER_REM),
+            size_min: format!("{:.4}rem", SIZE_MIN_PT / PT_PER_REM),
             lead0,
             h_lead0,
             tracks,
@@ -1060,8 +1058,8 @@ mod tests {
         // carries the per-font advance, and each bundle redefines it so the measure is reactive.
         let optical = out("optical.css");
         assert!(optical.contains("--cf-measure: 65;"));
-        assert!(optical.contains("--cf-aw: 0.4714;")); // default body = Inter's measured advance
-        assert!(out("typefaces.css").contains("--cf-aw:  0.4635;")); // Lora bundle overrides it
+        assert!(optical.contains("--cf-aw: 0.477;")); // default body = Inter's measured advance (weight-sampled)
+        assert!(out("typefaces.css").contains("--cf-aw:  0.4693;")); // Lora bundle overrides it
     }
 
     #[test]

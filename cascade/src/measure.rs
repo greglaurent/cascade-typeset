@@ -58,8 +58,106 @@ fn sfnt(data: &[u8]) -> Result<std::borrow::Cow<'_, [u8]>, String> {
 /// invent one.
 pub fn measure_face(data: &[u8]) -> Result<Measured, String> {
     let data = sfnt(data)?;
-    let face = Face::parse(&data, 0).map_err(|e| format!("parse font: {e}"))?;
+    let mut face = Face::parse(&data, 0).map_err(|e| format!("parse font: {e}"))?;
     let upem = face.units_per_em() as f64;
+
+    // opsz is a CHOICE, not an average: pin the optical-size axis to its text end (min) so we
+    // measure the reading face, not a display cut — opsz moves x-height AND advance materially
+    // (Inter x-height 0.546@14 → 0.516@32). Averaging across opsz would blend text with display.
+    if let Some(a) = variation_axis(&face, b"opsz") {
+        let _ = face.set_variation(ttf_parser::Tag::from_bytes(b"opsz"), a.min_value);
+    }
+
+    // wght IS averaged: the RON holds one metric vector but the advance thickens with weight and the
+    // body may be set at any weight. Sample the full metric vector at k weight positions → matrix M
+    // (k × metrics) and left-multiply by the weight vector p (`m* = pᵀ M`), p peaked at the reading
+    // (default) weight. Weight-INVARIANT rows of M (x-height, cap, asc, desc) fall out as their own
+    // constant; the advance row averages non-trivially — one uniform op, no per-metric special-case.
+    let m = match variation_axis(&face, b"wght") {
+        Some(a) => {
+            let wght = ttf_parser::Tag::from_bytes(b"wght");
+            let mut acc = MetricVec::ZERO;
+            for (pos, p) in wght_prior(a.min_value, a.def_value, a.max_value) {
+                let _ = face.set_variation(wght, pos);
+                acc = acc.add_scaled(measure_at(&face, upem)?, p);
+            }
+            let _ = face.set_variation(wght, a.def_value); // restore the default instance
+            acc
+        }
+        None => measure_at(&face, upem)?, // static font: one row, no averaging
+    };
+
+    Ok(Measured {
+        family: face.names().into_iter().find(|n| n.name_id == 1).and_then(|n| n.to_string()),
+        x_height: m.x_height,
+        cap_height: m.cap_height,
+        avg_advance: m.avg_advance,
+        units_per_em: upem as u32,
+        sx_height_units: (m.x_height * upem).round() as i64,
+        ascender: m.ascender,
+        descender: m.descender,
+    })
+}
+
+/// The weight-axis sampling: how many positions to sample (`k`, the rows of `M`), and the shape of
+/// the prior `p`. The prior is a Gaussian peaked at the DEFAULT (reading) weight but ASYMMETRIC —
+/// a wider half-width on the bold side than the light side, because body text runs regular→bold far
+/// more often than regular→light. Half-widths are fractions of each side's span (0 = the default,
+/// 1 = that end of the axis). Tunable in one place.
+const WGHT_SAMPLES: usize = 9;
+const SIGMA_LIGHT: f64 = 0.4; // narrow: light body is rare
+const SIGMA_BOLD: f64 = 0.8; // wide: medium/semibold/bold body is common
+
+/// The averaging prior `p`: `WGHT_SAMPLES` positions evenly across `[min, max]`, each weighted by the
+/// asymmetric Gaussian above and normalized to `Σp = 1`. Returns `(weight-axis position, p_i)`.
+fn wght_prior(min: f32, def: f32, max: f32) -> Vec<(f32, f64)> {
+    let (min, def, max) = (min as f64, def as f64, max as f64);
+    let mut samples: Vec<(f32, f64)> = (0..WGHT_SAMPLES)
+        .map(|i| {
+            let t = i as f64 / (WGHT_SAMPLES - 1) as f64;
+            let pos = min + (max - min) * t;
+            let (span, sigma) =
+                if pos >= def { ((max - def).max(1.0), SIGMA_BOLD) } else { ((def - min).max(1.0), SIGMA_LIGHT) };
+            let rel = (pos - def).abs() / span;
+            (pos as f32, (-(rel * rel) / (2.0 * sigma * sigma)).exp())
+        })
+        .collect();
+    let sum: f64 = samples.iter().map(|(_, w)| w).sum();
+    for s in &mut samples {
+        s.1 /= sum;
+    }
+    samples
+}
+
+/// One row of the metric matrix `M`: the em-normalized optical facts at the face's CURRENT variation
+/// coordinates. Weight-invariant across the wght axis except `avg_advance`.
+#[derive(Clone, Copy)]
+struct MetricVec {
+    x_height: f64,
+    cap_height: f64,
+    avg_advance: f64,
+    ascender: f64,
+    descender: f64,
+}
+
+impl MetricVec {
+    const ZERO: MetricVec =
+        MetricVec { x_height: 0.0, cap_height: 0.0, avg_advance: 0.0, ascender: 0.0, descender: 0.0 };
+    /// `self + p · other` — one term of the weighted sum `pᵀ M`.
+    fn add_scaled(self, o: MetricVec, p: f64) -> MetricVec {
+        MetricVec {
+            x_height: self.x_height + o.x_height * p,
+            cap_height: self.cap_height + o.cap_height * p,
+            avg_advance: self.avg_advance + o.avg_advance * p,
+            ascender: self.ascender + o.ascender * p,
+            descender: self.descender + o.descender * p,
+        }
+    }
+}
+
+/// Measure the em-normalized metric vector at the face's current variation state. Errors if the font
+/// lacks the metrics cascade requires (OS/2 x-height, a cap height) — we refuse rather than invent.
+fn measure_at(face: &Face, upem: f64) -> Result<MetricVec, String> {
     let sx = face.x_height().ok_or("font has no OS/2 x-height (sxHeight); cannot measure")? as f64;
     // cap height: OS/2 sCapHeight if present, else the 'H' glyph's top.
     let cap = face
@@ -69,16 +167,19 @@ pub fn measure_face(data: &[u8]) -> Result<Measured, String> {
         .ok_or("font has no cap height (sCapHeight, no 'H' glyph)")?;
     let asc = face.typographic_ascender().unwrap_or_else(|| face.ascender()) as f64;
     let desc = face.typographic_descender().unwrap_or_else(|| face.descender()) as f64;
-    Ok(Measured {
-        family: face.names().into_iter().find(|n| n.name_id == 1).and_then(|n| n.to_string()),
+    Ok(MetricVec {
         x_height: sx / upem,
         cap_height: cap / upem,
-        avg_advance: weighted_advance(&face) / upem,
-        units_per_em: upem as u32,
-        sx_height_units: sx as i64,
+        avg_advance: weighted_advance(face) / upem,
         ascender: asc / upem,
         descender: desc / upem,
     })
+}
+
+/// A variable-font axis by tag (`b"wght"`, `b"opsz"`), or `None` for a static font / absent axis.
+fn variation_axis(face: &Face, tag: &[u8; 4]) -> Option<ttf_parser::VariationAxis> {
+    let t = ttf_parser::Tag::from_bytes(tag);
+    face.variation_axes().into_iter().find(|a| a.tag == t)
 }
 
 /// The frequency-weighted mean glyph advance, in font units (divide by units_per_em for an em
