@@ -68,16 +68,20 @@ pub fn measure_face(data: &[u8]) -> Result<Measured, String> {
         let _ = face.set_variation(ttf_parser::Tag::from_bytes(b"opsz"), a.min_value);
     }
 
-    // wght IS averaged: the RON holds one metric vector but the advance thickens with weight and the
-    // body may be set at any weight. Sample the full metric vector at k weight positions → matrix M
-    // (k × metrics) and left-multiply by the weight vector p (`m* = pᵀ M`), p peaked at the reading
-    // (default) weight. Weight-INVARIANT rows of M (x-height, cap, asc, desc) fall out as their own
-    // constant; the advance row averages non-trivially — one uniform op, no per-metric special-case.
+    // wght IS averaged: the advance thickens with weight (non-linearly), and the body may be set at
+    // any weight, so one arbitrary instance under-describes the family. Sample the metric vector at
+    // the weights the font provides and combine them by a BODY-WEIGHT USAGE prior (`m* = pᵀ M`) —
+    // Regular dominates, light is rare, bold occasional. Only the advance row actually varies with
+    // weight (x-height / cap / asc / desc are weight-invariant, so they average back to their own
+    // constant); the matrix form just keeps it uniform. NB this bakes ONE weight-independent advance,
+    // so a Regular body gets a hair over the target chars/line and a Bold body a hair under — the
+    // right hedge for a FIXED measure. If the measure should ever track the document's body weight,
+    // keep the curve instead of collapsing it to a scalar here.
     let m = match variation_axis(&face, b"wght") {
         Some(a) => {
             let wght = ttf_parser::Tag::from_bytes(b"wght");
             let mut acc = MetricVec::ZERO;
-            for (pos, p) in wght_prior(a.min_value, a.def_value, a.max_value) {
+            for (pos, p) in wght_prior(a.min_value, a.max_value) {
                 let _ = face.set_variation(wght, pos);
                 acc = acc.add_scaled(measure_at(&face, upem)?, p);
             }
@@ -99,30 +103,27 @@ pub fn measure_face(data: &[u8]) -> Result<Measured, String> {
     })
 }
 
-/// The weight-axis sampling: how many positions to sample (`k`, the rows of `M`), and the shape of
-/// the prior `p`. The prior is a Gaussian peaked at the DEFAULT (reading) weight but ASYMMETRIC —
-/// a wider half-width on the bold side than the light side, because body text runs regular→bold far
-/// more often than regular→light. Half-widths are fractions of each side's span (0 = the default,
-/// 1 = that end of the axis). Tunable in one place.
-const WGHT_SAMPLES: usize = 9;
-const SIGMA_LIGHT: f64 = 0.4; // narrow: light body is rare
-const SIGMA_BOLD: f64 = 0.8; // wide: medium/semibold/bold body is common
+/// How often each OpenType weight class is set as BODY text — the averaging prior, keyed to the
+/// standard weights (400 = Regular). A legible, arguable distribution: Regular dominates, light is
+/// rare as body, bold is set occasionally. This is the one knob; adjust the rates, not a Gaussian σ.
+const WEIGHT_USAGE: &[(f32, f64)] = &[
+    (300.0, 0.10), // Light
+    (400.0, 0.50), // Regular — the default body weight
+    (500.0, 0.20), // Medium
+    (600.0, 0.12), // SemiBold
+    (700.0, 0.08), // Bold
+];
 
-/// The averaging prior `p`: `WGHT_SAMPLES` positions evenly across `[min, max]`, each weighted by the
-/// asymmetric Gaussian above and normalized to `Σp = 1`. Returns `(weight-axis position, p_i)`.
-fn wght_prior(min: f32, def: f32, max: f32) -> Vec<(f32, f64)> {
-    let (min, def, max) = (min as f64, def as f64, max as f64);
-    let mut samples: Vec<(f32, f64)> = (0..WGHT_SAMPLES)
-        .map(|i| {
-            let t = i as f64 / (WGHT_SAMPLES - 1) as f64;
-            let pos = min + (max - min) * t;
-            let (span, sigma) =
-                if pos >= def { ((max - def).max(1.0), SIGMA_BOLD) } else { ((def - min).max(1.0), SIGMA_LIGHT) };
-            let rel = (pos - def).abs() / span;
-            (pos as f32, (-(rel * rel) / (2.0 * sigma * sigma)).exp())
-        })
-        .collect();
-    let sum: f64 = samples.iter().map(|(_, w)| w).sum();
+/// The averaging prior `p` over the wght axis: the usage rates above, restricted to the weights the
+/// font's axis actually covers `[min, max]` and renormalized to `Σp = 1`. A font that spans a
+/// non-standard band (nothing in 300–700) falls back to its midpoint. Returns `(weight, p_i)`.
+fn wght_prior(min: f32, max: f32) -> Vec<(f32, f64)> {
+    let mut samples: Vec<(f32, f64)> =
+        WEIGHT_USAGE.iter().copied().filter(|&(w, _)| w >= min && w <= max).collect();
+    if samples.is_empty() {
+        samples.push(((min + max) / 2.0, 1.0));
+    }
+    let sum: f64 = samples.iter().map(|(_, p)| p).sum();
     for s in &mut samples {
         s.1 /= sum;
     }

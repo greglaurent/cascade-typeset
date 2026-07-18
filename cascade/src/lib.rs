@@ -60,7 +60,7 @@ mod tests {
         assert_eq!(Font::Lora.category(), Category::Serif);
         assert_eq!(Font::Inter.x_height(), 0.546);
         // avg_advance is a measured metric (the copyfitting factor): per-font, plus a category default.
-        assert_eq!(Font::Inter.avg_advance(), 0.477); // weight-sampled (avg toward mid), opsz-min
+        assert_eq!(Font::Inter.avg_advance(), 0.4735); // weight-averaged by the body-usage prior, opsz pinned to text
         assert_eq!(Category::Serif.default_avg_advance(), 0.46);
         // The bundle ships Inter (body), Lora (heading), IBM Plex Mono (code); other faces are the
         // client's (external) domain. A multi-word family compiles to a PascalCase variant.

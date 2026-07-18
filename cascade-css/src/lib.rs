@@ -1058,8 +1058,8 @@ mod tests {
         // carries the per-font advance, and each bundle redefines it so the measure is reactive.
         let optical = out("optical.css");
         assert!(optical.contains("--cf-measure: 65;"));
-        assert!(optical.contains("--cf-aw: 0.477;")); // default body = Inter's measured advance (weight-sampled)
-        assert!(out("typefaces.css").contains("--cf-aw:  0.4693;")); // Lora bundle overrides it
+        assert!(optical.contains("--cf-aw: 0.4735;")); // default body = Inter's advance (body-usage weighted)
+        assert!(out("typefaces.css").contains("--cf-aw:  0.4669;")); // Lora bundle overrides it
     }
 
     #[test]
