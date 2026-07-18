@@ -346,6 +346,24 @@ fn main() {
     method(&mut o, "desc", "&'static str", &fv, &m(|x| q(&x.measured.desc)));
     close(&mut o);
 
+    // -- Font::source_bytes: the vendored source file (fonts/sources/<slug>.ttf), EMBEDDED, for
+    // delivering a bundled font where the medium needs the actual file (Typst compiles against font
+    // files, not names). Feature-gated behind `measure` so type-only consumers don't carry the binary.
+    // include_bytes! makes each .ttf a compile dependency, so a source change rebuilds automatically. --
+    let _ = writeln!(o, "#[cfg(feature = \"measure\")]\nimpl Font {{");
+    let _ = writeln!(o, "    /// The vendored source font bytes, embedded — for delivery where the medium needs the");
+    let _ = writeln!(o, "    /// actual file (e.g. Typst). Feature-gated (`measure`).");
+    let _ = writeln!(o, "    pub fn source_bytes(self) -> &'static [u8] {{\n        match self {{");
+    for x in &fonts {
+        let slug: String = x.name.to_lowercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+        let _ = writeln!(
+            o,
+            "            Self::{} => include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/fonts/sources/{slug}.ttf\")),",
+            pascal(&x.name),
+        );
+    }
+    let _ = writeln!(o, "        }}\n    }}\n}}\n");
+
     // -- ScalePreset --
     let pv: Vec<String> = s.scale_presets.iter().map(|x| pascal(&x.name)).collect();
     enum_head(&mut o, "ScalePreset", &pv);

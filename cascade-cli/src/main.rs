@@ -222,7 +222,30 @@ fn build(b: Build) -> Res {
             }
         }
     }
-    let cfg = resolve(file, b.scale, b.body, b.heading, b.code, b.theme, &external)?;
+    let mut cfg = resolve(file, b.scale, b.body, b.heading, b.code, b.theme, &external)?;
+
+    // Typst compiles against font FILES, not names — so for the typst target EVERY selected font must
+    // be delivered as a written file (referenced via the font path), not left `System`. A bundled font
+    // pulls in its EMBEDDED source (carries with the spec, works anywhere — no repo-relative faces dir);
+    // an external one already carries bytes. CSS keeps its System/embed/link behaviour untouched.
+    if b.target == "typst" {
+        for f in [&mut cfg.body, &mut cfg.heading, &mut cfg.code] {
+            if matches!(f.delivery, FontDelivery::System)
+                && let Some(font) = Font::from_family(&f.family)
+            {
+                let bytes = font.source_bytes().to_vec();
+                let style = cascade::measure::face_style(&bytes);
+                f.delivery = FontDelivery::Faces(vec![Face { format: FontFormat::Ttf, bytes, style, href: None }]);
+            }
+            if let FontDelivery::Faces(faces) = &mut f.delivery {
+                let slug = slugify(&f.family);
+                for face in faces.iter_mut() {
+                    face.href = Some(format!("fonts/{}.{}", face_stem(&slug, face.style), face.format.ext()));
+                }
+            }
+        }
+    }
+
     let renderer = renderer_for(&b.target)?;
 
     let outputs = renderer.render(&cfg);
@@ -325,17 +348,18 @@ fn build(b: Build) -> Res {
         cfg.code.family,
         cfg.theme.id(),
     );
+    if b.target == "typst" && !linked.is_empty() {
+        println!("  compile with: typst compile --font-path {}/fonts {}/cascade.typ", b.out.display(), b.out.display());
+    }
     Ok(())
 }
 
 // ── dist ───────────────────────────────────────────────────────────────────────────────────
-// The release step (was the top-level justfile's `dist`): build the committed distribution for every
-// renderer to dist/<format>, VERIFIED, then stamp the spec's VERSION and drop the build manifest (an
-// internal clean aid, not part of a shipped artifact). One command, no shelling out, version straight
-// from the crate. Typst additionally gets the static faces it needs to render (it can't weight a
-// variable font), shipped under dist/typst/fonts — the consumer compiles with `--font-path fonts`.
-const FACES_DIR: &str = "cascade/fonts/faces";
-
+// The release step: build the committed distribution for every renderer to dist/<format>, VERIFIED,
+// then stamp the spec's VERSION and drop the build manifest (an internal clean aid, not a shipped
+// artifact). One command, no shelling out, version straight from the crate. Each target's build is
+// itself self-contained — the typst build writes its fonts (dist/typst/fonts), so there's nothing to
+// copy in afterward.
 fn dist(d: Dist) -> Res {
     for (target, sub) in [("css", "css"), ("typst", "typst")] {
         let out = d.out.join(sub);
@@ -355,37 +379,8 @@ fn dist(d: Dist) -> Res {
         let _ = std::fs::remove_file(out.join(MANIFEST)); // shipped artifact: no internal manifest
         std::fs::write(out.join("VERSION"), format!("cascade {}\n", cascade::VERSION))?;
     }
-    // Ship the static delivery faces with the Typst output (Typst renders from real weights/styles).
-    let faces_out = d.out.join("typst").join("fonts");
-    match ship_faces(&faces_out) {
-        Ok(n) if n > 0 => println!("  typst: bundled {n} static face(s) → {}", faces_out.display()),
-        Ok(_) => eprintln!("  note: no static faces at {FACES_DIR}; Typst output needs fonts via --font-path"),
-        Err(e) => eprintln!("  warning: could not bundle Typst faces: {e}"),
-    }
     println!("built distribution {} (cascade {})", d.out.display(), cascade::VERSION);
     Ok(())
-}
-
-/// Copy the bundled static `.ttf` delivery faces into `out`. Returns how many were copied (0 if the
-/// faces dir is absent — e.g. run outside the repo). The release step runs in-repo, so [`FACES_DIR`]
-/// is the vendored set.
-fn ship_faces(out: &std::path::Path) -> Result<usize, Box<dyn std::error::Error>> {
-    let src = std::path::Path::new(FACES_DIR);
-    if !src.is_dir() {
-        return Ok(0);
-    }
-    std::fs::create_dir_all(out)?;
-    let mut n = 0;
-    for entry in std::fs::read_dir(src)? {
-        let path = entry?.path();
-        if path.extension().and_then(|e| e.to_str()) == Some("ttf") {
-            if let Some(name) = path.file_name() {
-                std::fs::copy(&path, out.join(name))?;
-                n += 1;
-            }
-        }
-    }
-    Ok(n)
 }
 
 /// Overlay flags onto the file onto the compiled defaults; resolve every name against its closed

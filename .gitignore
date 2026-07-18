@@ -1,13 +1,10 @@
 # Rust build artifacts
 /target
 
-# Scratch build output. The shipped, committed DISTRIBUTION lives in /dist/<format> (see
-# `cascade dist`) and is tracked; anything else written under /dist (e.g. an ad-hoc `cascade build
-# --out dist`) is scratch and ignored. Typst ships its static faces under /dist/typst/fonts.
-/dist/*
-!/dist/css/
-!/dist/typst/
-!/dist/README.md
+# Build output. `/dist` is REGENERABLE — `cargo run -p cascade-cli -- dist` reproduces it byte-for-
+# byte (verified), so it's a RELEASE artifact (attach to a release), not committed. The spec's source
+# of truth (fonts/sources, tokens.ron, …) is what's tracked; dist is derived from it.
+/dist
 
 # Build bookkeeping (written into every --out dir)
 .cascade-manifest.json

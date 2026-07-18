@@ -31,21 +31,18 @@ Idempotent, and preserves each font's tuned `profile`. `sources/` holds the **va
 `measure_face` samples them: it pins the optical axis to its text end and averages the weight axis
 (a bold-skewed Gaussian prior over the wght range, `m* = pᵀM`), since x-height/cap are weight-
 invariant and only the advance drifts. So the measured metric is a robust family value, not one
-arbitrary instance. (`build.rs` scans only `*.ron` at this folder's top level, so `sources/`,
-`faces/`, this README, and the `.OFL.txt` files are ignored by the spec compile.)
+arbitrary instance. (`build.rs` scans only `*.ron` at this folder's top level, so `sources/`, this
+README, and the `.OFL.txt` files are ignored by the spec compile.)
 
-## `faces/` — static delivery faces (for Typst)
+## Delivery: the source travels with the spec
 
-`faces/` holds **static** instances (Regular/SemiBold/Bold + italics) for renderers that can't use a
-variable font — Typst 0.14 renders a `weight: 700` request from a variable file at *regular*. The CSS
-path uses the variable sources directly (`@font-face`); the Typst dist ships these static faces
-(`cascade build --target typst` / `dist` copies them to `dist/typst/fonts`, compiled with
-`--font-path fonts`). They are instanced from the variable sources (opsz pinned to text), e.g.:
-
-    fonttools varLib.instancer sources/lora.ttf wght=700 -o faces/Lora-Bold.ttf
-
-Metrics come from the variable measurement above (weight-invariant), so the statics are delivery
-only — never separately measured.
+For a medium that renders from font FILES rather than names (Typst), a bundled font's variable
+`sources/` file is EMBEDDED into the spec (`Font::source_bytes`, feature-gated), so `cascade build
+--target typst` writes it to `<out>/fonts/` and the document compiles self-contained
+(`typst compile --font-path fonts …`) — anywhere, no repo-relative paths, reproducibly. Typst 0.14
+weights a variable font correctly (verified: it enumerates every instance and renders `weight: 700`
+distinctly), so ONE variable file per family covers all weights — no static instances needed. CSS
+names the family and `@font-face`-embeds the same source when delivery is requested.
 
 ## Add / update a bundled font
 

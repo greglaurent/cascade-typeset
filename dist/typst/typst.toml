@@ -1,5 +1,0 @@
-[package]
-name = "cascade"
-version = "0.1.0"
-entrypoint = "cascade.typ"
-description = "cascade typography, baked for Typst (print)."
