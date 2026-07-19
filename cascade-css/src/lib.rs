@@ -10,8 +10,8 @@ use cascade::formula::{self, Val};
 use cascade::renderer::{Config, FontDelivery, Output, Renderer, ResolvedFont};
 use cascade::{
     role_color, Category, Color, Font, FontRole, Multiplier, Role, ScalePreset, Semantic, BASE_PT,
-    LEADING_CLAMP, MEASURE, RHYTHM_UNIT_RATIO, SIZE_MIN_PT, STEPS_MAX, STEPS_MIN, TRACKING_CLAMP,
-    WORD_SPACE_K,
+    CODE_SCALE, LEADING_CLAMP, MEASURE, RHYTHM_UNIT_RATIO, SIZE_MIN_PT, STEPS_MAX, STEPS_MIN,
+    TRACKING_CLAMP, WORD_SPACE_K,
 };
 
 /// cascade-css's default base body size, in points, driven from the user's perspective
@@ -797,11 +797,13 @@ impl Renderer for Css {
         // formulas re-resolve for the code subtree; + inline/block chrome. `font-size-adjust` pins the
         // mono's rendered x-height to the DOCUMENT body's (`--cf-xh-doc`): a monospace face carries a
         // larger x-height than a text face, so at an equal em it reads oversized in running prose. This
-        // normalises apparent size across families (and across whatever the mono fallback resolves to),
-        // which is why inline code needs no hand-tuned em fudge -- the x-height match supplies it.
+        // normalises apparent size across families (and across whatever the mono fallback resolves to).
+        // On TOP of that match, code is scaled by the spec's `CODE_SCALE` (< 1): mono still reads heavier
+        // than proportional type at equal apparent size, and a code line holds fewer chars than the prose
+        // measure — so inline code takes `CODE_SCALE`em (of its context) and a code block `CODE_SCALE`×base.
         layout.push_str(&format!(".cascade code, .cascade kbd, .cascade samp, .cascade pre {{ letter-spacing: 0; word-spacing: normal; font-size-adjust: {}; {}: {}; {}: {}; {}: {}; }}\n", Var::xh_doc().get(), Var::xh(b).def(), Var::code_xh().get(), Var::kt(b).def(), Var::code_kt().get(), Var::lb(b).def(), Var::code_lb().get()));
-        layout.push_str(".cascade :not(pre) > code { padding: 0.1em 0.34em; border-radius: 3px; }\n");
-        layout.push_str(&format!(".cascade pre {{ font-size: {}; line-height: {}; padding: 1em; border-radius: 4px; overflow-x: auto; }}\n", Var::size(0).get(), Var::lead(b, 0).get()));
+        layout.push_str(&format!(".cascade :not(pre) > code {{ font-size: {CODE_SCALE}em; padding: 0.1em 0.34em; border-radius: 3px; }}\n"));
+        layout.push_str(&format!(".cascade pre {{ font-size: calc({} * {CODE_SCALE}); line-height: {}; padding: 1em; border-radius: 4px; overflow-x: auto; }}\n", Var::size(0).get(), Var::lead(b, 0).get()));
         layout.push_str(".cascade pre code { background: none; padding: 0; font-size: inherit; }\n");
         // quote
         layout.push_str(&format!(".cascade blockquote {{ padding: {} 2em; border-inline-start: 3px solid {}; }}\n", Var::space("p1").get(), Var::color(border(Role::Quote)).get()));

@@ -42,6 +42,12 @@
         base_pt: 11.0,
         size_min_pt: 9.0,
         rhythm_unit_ratio: 0.375,
+        // code_scale: code (inline + block) is set to this fraction of its reference size BEFORE the
+        //   x-height match. A monospace reads heavier/wider than proportional type at equal apparent
+        //   size, and a code line holds fewer chars than the prose measure; 0.9 makes code read as
+        //   clearly secondary and keeps ordinary command lines inside the measure. Applied by every
+        //   renderer on top of the x-height adjustment, so CSS and print shrink code identically.
+        code_scale: 0.9,
     ),
     // Per-CATEGORY default optical tuning — the baseline for the GENERIC case, when no
     // specific font is selected (generic serif / sans / mono). A selected font OVERRIDES

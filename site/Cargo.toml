@@ -10,6 +10,7 @@ edition = "2021"
 [dependencies]
 cascade = { path = "../cascade" }
 cascade-css = { path = "../cascade-css" }
+cascade-typst = { path = "../cascade-typst" }
 
 axum = "0.7"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }

@@ -34,11 +34,13 @@
 #let fonts = (body: "{{ body_family }}", heading: "{{ heading_family }}", code: "{{ code_family }}")
 
 // ── baked type scale + optical (per document role) ────────────────────────────
-// size in pt; tracking / spacing (word-space) in em; te/be are the line-box top/bottom edges (em)
-// that make the box the full line-height with leading:0; above/below are block margins (pt); fill is
-// the role's resolved colour.
+// SIZED roles carry size (pt), tracking / spacing (word-space) in em, te/be = the line-box top/bottom
+// edges (em) that make the box the full line-height with leading:0, above/below = block margins (pt),
+// and fill = the role's colour. INLINE DECORATIONS (strong/emphasis/link/inline-code) carry ONLY their
+// decoration and inherit size/leading/tracking from context — like CSS, which sets them no font-size
+// (code keeps an x-height match, but as a relative em factor so it scales with the surrounding size).
 #let typ = (
-{% for r in rows %}  {{ r.name }}: (size: {{ r.size }}pt, tracking: {{ r.tracking }}em, te: {{ r.top_edge }}em, be: {{ r.bottom_edge }}em, spacing: {{ r.word }}em, fill: rgb("{{ r.fill }}"){{ r.extras }}),
+{% for r in rows %}  {{ r.name }}: ({{ r.body }}),
 {% endfor %})
 
 // ── baked vertical rhythm ─────────────────────────────────────────────────────
@@ -98,11 +100,13 @@
   for (key, lvl) in (("heading-1", 1), ("heading-2", 2), ("heading-3", 3), ("heading-4", 4)) {
     result.insert(key, body => _role(typ.at(key), body, font: fonts.heading))
   }
-  // inline decorations
-  result.insert("strong", body => _apply(typ.strong, body))
-  result.insert("emphasis", body => _apply(typ.emphasis, body))
+  // Inline decorations — apply ONLY the decoration and INHERIT size/leading/tracking from context
+  // (matching CSS `strong{font-weight}`, `em{font-style}`, `a{color;underline}`, which set no size).
+  // Using an absolute `_apply` here would reset e.g. italic inside a 9pt footnote back to 11pt.
+  result.insert("strong", body => text(weight: typ.strong.weight, body))
+  result.insert("emphasis", body => text(style: typ.emphasis.style, body))
   result.insert("link", (dest, body) => link(dest, underline(
-    stroke: 0.5pt + theme.link, offset: 0.15em, _apply(typ.link, body, fill: theme.link),
+    stroke: 0.5pt + theme.link, offset: 0.15em, text(fill: typ.link.fill, body),
   )))
   // Inline code: a tinted pill that HUGS the glyphs, sitting on the text baseline like ordinary
   // inline text — NOT the tall line-height box (te/be), which would tower over the line. The code
@@ -119,7 +123,11 @@
     fill: theme.code-bg, inset: 1em, radius: 4pt, width: 100%, breakable: true,
     below: typ.code-block.at("below", default: rhythm.baseline),
     {
-      set par(leading: 0pt)
+      // Code never hyphenates or justifies: a line that exceeds the measure soft-wraps at whitespace,
+      // never mid-token (so a flag like `--verify` can't split into `--` / `verify`). Print's analogue
+      // of the CSS block's `overflow-x: auto` (which keeps the line intact and scrolls instead).
+      set par(leading: 0pt, justify: false)
+      set text(hyphenate: false)
       _apply(typ.code-block, body, font: fonts.code, fill: theme.code-fg)
     },
   ))

@@ -5,11 +5,13 @@
 
 mod assets;
 mod css;
+mod pdf;
 mod state;
 mod web;
 
+use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::{routing::get, Router};
 use tower_http::services::ServeDir;
@@ -31,11 +33,15 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         assets: Assets::load(),
         stylesheet: Arc::new(css::stylesheet()),
+        pdf_cache: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let app = Router::new()
         .route("/", get(web::index))
         .route("/sample", get(web::sample))
+        // The specimen as a Typst-compiled PDF, rendered in-memory via cascade-typst + the `typst`
+        // CLI (single source: the renderer) — the print projection of the same document.
+        .route("/sample.pdf", get(pdf::sample_pdf))
         .route("/health", get(|| async { "ok" }))
         // The cascade stylesheet, rendered in-memory via the cascade-css API (single source: the renderer).
         .route("/css/cascade.css", get(web::cascade_css))

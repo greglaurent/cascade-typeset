@@ -393,6 +393,7 @@ dependencies = [
  "axum",
  "cascade",
  "cascade-css",
+ "cascade-typst",
  "serde",
  "serde_json",
  "tokio",

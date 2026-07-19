@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cascade-site",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /home/greg/Workspace/cascade-typeset/site && BIND_ADDR=0.0.0.0:8080 exec ../target/debug/cascade-site"],
+      "port": 8080
+    }
+  ]
+}

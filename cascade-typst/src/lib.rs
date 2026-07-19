@@ -16,8 +16,8 @@ use askama::Template;
 use cascade::formula;
 use cascade::renderer::{Config, Output, Renderer, ResolvedFont};
 use cascade::{
-    role_color, Color, FontRole, Multiplier, Role, Semantic, Theme, BASE_PT, LEADING_CLAMP, MEASURE,
-    RHYTHM_UNIT_RATIO, SIZE_MIN_PT, TRACKING_CLAMP, VERSION, WORD_SPACE_K,
+    role_color, Color, FontRole, Multiplier, Role, RoleKind, Semantic, Theme, BASE_PT, CODE_SCALE,
+    LEADING_CLAMP, MEASURE, RHYTHM_UNIT_RATIO, SIZE_MIN_PT, TRACKING_CLAMP, VERSION, WORD_SPACE_K,
 };
 
 // The typographic constants — base reading size, rhythm-unit ratio, readability floor — are
@@ -71,16 +71,10 @@ struct CascadeTyp {
 
 struct TypeRow {
     name: &'static str,
-    size: String,
-    tracking: String,
-    // Line box edges (em) that make Typst's box the full line-height with `leading: 0` — so a block's
-    // height is `N × line-height` (half-leading above the first line + below the last), exactly like
-    // CSS. Replaces the earlier 1em-box + inter-line leading, which left blocks a half-leading short.
-    top_edge: String,
-    bottom_edge: String,
-    word: String,
-    fill: String,
-    extras: String,
+    /// The role's baked Typst dict body (the text inside `(…)`). A SIZED role carries an absolute
+    /// `size`/`tracking`/line-box `te`/`be`/`spacing`; an inline DECORATION carries only its decoration
+    /// (weight / style / colour), inheriting size & leading from context — see [`type_row`].
+    body: String,
 }
 
 /// Trim a float to 3 decimals and drop trailing zeros — clean Typst literals.
@@ -127,6 +121,14 @@ fn space_pt(tok: Option<&str>, baseline: f64, unit: f64) -> Option<f64> {
     })
 }
 
+/// True for an inline DECORATION — a role that carries no scale step (`strong`, `emphasis`, `link`,
+/// inline `code`). CSS gives these NO `font-size`: they inherit the surrounding size (and leading &
+/// tracking), applying only their one decoration. `text-1…5` / `small` / `sidenote` are inline too
+/// but carry a step, so they ARE sized spans, not decorations. `code-block`/`quote` are blocks.
+fn is_decoration(role: Role) -> bool {
+    role.kind() == RoleKind::Inline && role.step().is_none()
+}
+
 /// Project one role into a baked `typ` row. `Root` is the page/base, not a component.
 fn type_row(role: Role, cfg: &Config, baseline: f64, unit: f64) -> Option<TypeRow> {
     if role == Role::Root {
@@ -139,12 +141,43 @@ fn type_row(role: Role, cfg: &Config, baseline: f64, unit: f64) -> Option<TypeRo
     let fr = role.font().unwrap_or(FontRole::Body);
     let font = font_for(fr, cfg);
 
+    let fill = resolve_color(cfg.theme, role_color(role).fg.unwrap_or("fg"))
+        .unwrap_or_else(|| cfg.theme.light(Color::Fg).to_string());
+
+    // Inline decorations INHERIT size/leading/tracking (exactly like CSS, where `strong`/`em`/`a`/
+    // inline-`code` set no `font-size`). Baking an absolute size would make e.g. italic inside a 9pt
+    // footnote snap back to the 11pt body size. So emit ONLY the decoration.
+    if is_decoration(role) {
+        let body = if fr == FontRole::Code {
+            // Code still matches the body's x-height — but as a RELATIVE em factor (the print analogue
+            // of CSS `font-size-adjust`), so it scales with whatever context it sits in, times the
+            // spec's `CODE_SCALE` (mono reads heavier than proportional type at equal apparent size).
+            // Tracking and word-space are reset (CSS `letter-spacing: 0; word-spacing: normal`).
+            let xh = cfg.body.x_height / cfg.code.x_height * CODE_SCALE;
+            format!("size: {}em, tracking: 0em, spacing: 0em", f(xh))
+        } else {
+            let mut d = Vec::new();
+            if let Some(w) = role.weight() {
+                d.push(format!("weight: {w}"));
+            }
+            if role.italic() {
+                d.push("style: \"italic\"".to_string());
+            }
+            if role.underline() {
+                d.push(format!("fill: rgb(\"{fill}\")"));
+            }
+            d.join(", ")
+        };
+        return Some(TypeRow { name: role.id(), body });
+    }
+
     // Scale size, floored at the readability minimum (exactly as the CSS output clamps it).
     let mut size = (BASE_PT * formula::size_factor::<f64>(step, n, ratio)).max(SIZE_MIN_PT);
-    // Code optically matched to the body's x-height (print analogue of CSS `font-size-adjust`):
-    // a mono face's larger x-height would otherwise read oversized beside the text face.
+    // Code (block: `pre`) optically matched to the body's x-height (print analogue of CSS
+    // `font-size-adjust`), then scaled by the spec's `CODE_SCALE` so a code block reads as clearly
+    // secondary and ordinary command lines stay inside the reading measure.
     if fr == FontRole::Code {
-        size *= cfg.body.x_height / cfg.code.x_height;
+        size *= cfg.body.x_height / cfg.code.x_height * CODE_SCALE;
     }
 
     let lead0 = formula::lead0::<f64>(font.leading_base, MEASURE as f64, font.x_height);
@@ -175,19 +208,17 @@ fn type_row(role: Role, cfg: &Config, baseline: f64, unit: f64) -> Option<TypeRo
         extras += &format!(", below: {}pt", f(b));
     }
 
-    let fill = resolve_color(cfg.theme, role_color(role).fg.unwrap_or("fg"))
-        .unwrap_or_else(|| cfg.theme.light(Color::Fg).to_string());
-
-    Some(TypeRow {
-        name: role.id(),
-        size: f(size),
-        tracking: f(tracking),
-        top_edge: f(top_edge),
-        bottom_edge: f(bottom_edge),
-        word: f(word),
+    let body = format!(
+        "size: {}pt, tracking: {}em, te: {}em, be: {}em, spacing: {}em, fill: rgb(\"{}\"){}",
+        f(size),
+        f(tracking),
+        f(top_edge),
+        f(bottom_edge),
+        f(word),
         fill,
         extras,
-    })
+    );
+    Some(TypeRow { name: role.id(), body })
 }
 
 /// The Typst package manifest — makes `dist/typst` importable as `@local/cascade`.
@@ -376,6 +407,129 @@ mod tests {
         assert!(s.contains("spacing: 100% +"));
         // measure centred via a computed horizontal page margin
         assert!(s.contains("margin: (x:"));
+    }
+
+    /// The line of `s` whose first non-blank token is `prefix` (e.g. `"body: ("`, `"unit: "`).
+    fn line_starting<'a>(s: &'a str, prefix: &str) -> &'a str {
+        s.lines()
+            .find(|l| l.trim_start().starts_with(prefix))
+            .unwrap_or_else(|| panic!("no line starting `{prefix}`"))
+    }
+
+    /// The numeric literal following `"{key}: "` on `line` — unit suffix (`pt`/`em`) ignored. The
+    /// key must sit at a field boundary (preceded by `(` or space) so `te` doesn't match `quote`.
+    fn num(line: &str, key: &str) -> f64 {
+        let needle = format!("{key}: ");
+        let at = line
+            .match_indices(&needle)
+            .find(|&(i, _)| i > 0 && matches!(line.as_bytes()[i - 1], b'(' | b' '))
+            .map(|(i, _)| i)
+            .unwrap_or_else(|| panic!("no `{key}` in: {line}"));
+        let rest = &line[at + needle.len()..];
+        let lit: String =
+            rest.chars().take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-').collect();
+        lit.parse().unwrap_or_else(|_| panic!("bad `{key}` in: {line}"))
+    }
+
+    /// THE PARITY ANCHOR. cascade-css proves its `calc()` output folds to the shared `formula::f64`
+    /// (`css_projection_folds_to_the_f64_projection`). This proves the Typst BAKED output equals the
+    /// SAME `formula::f64` — for every SIZED role's size / tracking / word-space / line-height, the
+    /// rhythm unit / baseline / spacing tokens, and the reading measure. Both renderers pinned to one
+    /// f64 ground truth ⇒ CSS and Typst cannot diverge on typography; only on render-specific mechanism
+    /// (CSS's fluid clamp & `font-size-adjust` vs Typst's fixed pt & baked size). Reads the rendered
+    /// artifact (not the private helpers), so a wrong constant / dropped floor / bad edge model here
+    /// diverges from the spec-derived truth and fails.
+    ///
+    /// Inline DECORATIONS (`strong`/`emphasis`/`link`/inline-`code`) are checked the OTHER way: CSS
+    /// sets them no `font-size`, so they must carry NO absolute pt dimension and inherit — otherwise
+    /// e.g. italic inside a 9pt footnote snaps back to the 11pt body size.
+    #[test]
+    fn baked_output_equals_the_f64_projection_so_css_and_typst_agree() {
+        let cfg = Config::default();
+        let s = lib();
+        let n = cfg.scale.n() as f64;
+        let ratio = cfg.scale.ratio();
+        let ln = ratio.ln();
+        // Baked literals are rounded to 3 decimals by `f()`; allow that plus fp slack.
+        let close = |got: f64, want: f64, what: &str| {
+            assert!(
+                (got - want).abs() <= 3e-3 * (1.0 + want.abs()),
+                "{what}: baked {got}, f64 projection {want}"
+            );
+        };
+
+        // ── per-role type table ──────────────────────────────────────────────
+        for &role in Role::ALL.iter().filter(|&&r| r != Role::Root) {
+            let line = line_starting(&s, &format!("{}: (", role.id()));
+            let fr = role.font().unwrap_or(FontRole::Body);
+            let id = role.id();
+
+            // Inline decorations INHERIT size (CSS sets them no font-size): they must carry NO absolute
+            // pt dimension. `code` keeps an x-height match, but RELATIVE (em) so it scales with context.
+            // The decoration set is named EXPLICITLY here (not via the renderer's own `is_decoration`)
+            // so this test independently pins the right answer — if the renderer regresses to baking an
+            // absolute size on any of them, the `pt` assertion fires.
+            if matches!(role, Role::Strong | Role::Emphasis | Role::Link | Role::Code) {
+                assert!(
+                    !line.contains("pt"),
+                    "{id} is an inline decoration and must inherit size (no absolute pt): {line}"
+                );
+                if fr == FontRole::Code {
+                    close(
+                        num(line, "size"),
+                        cfg.body.x_height / cfg.code.x_height * CODE_SCALE,
+                        &format!("{id} x-height factor (relative em)"),
+                    );
+                }
+                continue;
+            }
+
+            let step = role.step().unwrap_or(0) as f64;
+            let font = font_for(fr, &cfg);
+
+            // size: base × scale, floored at the minimum; code (block) matched to body x-height × CODE_SCALE.
+            let mut size = (BASE_PT * formula::size_factor::<f64>(step, n, ratio)).max(SIZE_MIN_PT);
+            if fr == FontRole::Code {
+                size *= cfg.body.x_height / cfg.code.x_height * CODE_SCALE;
+            }
+            close(num(line, "size"), size, &format!("{id} size"));
+            close(
+                num(line, "tracking"),
+                formula::tracking::<f64>(step, n, ln, font.k_tracking, TRACKING_CLAMP),
+                &format!("{id} tracking"),
+            );
+            close(
+                num(line, "spacing"),
+                formula::word_space::<f64>(step, n, ln, font.word_space, WORD_SPACE_K),
+                &format!("{id} word-space"),
+            );
+            // Line-box height (te − be) must equal the role's line-height — i.e. CSS `line-height`.
+            let lead0 = formula::lead0::<f64>(font.leading_base, MEASURE as f64, font.x_height);
+            let lead = formula::leading::<f64>(step, n, ln, lead0, LEADING_CLAMP.0, LEADING_CLAMP.1);
+            close(num(line, "te") - num(line, "be"), lead, &format!("{id} line-height (te−be)"));
+        }
+
+        // ── rhythm ───────────────────────────────────────────────────────────
+        let unit = BASE_PT * RHYTHM_UNIT_RATIO;
+        close(num(line_starting(&s, "unit: "), "unit"), unit, "rhythm unit");
+        let bl0 = formula::lead0::<f64>(cfg.body.leading_base, MEASURE as f64, cfg.body.x_height);
+        let blr = formula::leading::<f64>(0.0, n, ln, bl0, LEADING_CLAMP.0, LEADING_CLAMP.1);
+        close(
+            num(line_starting(&s, "baseline: "), "baseline"),
+            formula::baseline::<f64>(BASE_PT, blr),
+            "rhythm baseline",
+        );
+        let sp = line_starting(&s, "spacing: (");
+        for m in Multiplier::ALL {
+            close(num(sp, m.id()), formula::spacing::<f64>(unit, m.factor()), &format!("spacing {}", m.id()));
+        }
+
+        // ── reading measure (page geometry) ──────────────────────────────────
+        // Same copyfit width cascade-css bakes into `--cf-measure-inline`, centred on us-letter.
+        let measure = MEASURE as f64 * cfg.body.avg_advance * BASE_PT;
+        let margin_x = ((US_LETTER_PT - measure) / 2.0).max(72.0);
+        let mline = s.lines().find(|l| l.contains("margin: (x:")).expect("margin line");
+        close(num(mline, "x"), margin_x, "measure margin_x");
     }
 
     #[test]

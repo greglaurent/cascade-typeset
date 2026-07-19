@@ -73,6 +73,7 @@ struct Optical {
     base_pt: f64,
     size_min_pt: f64,
     rhythm_unit_ratio: f64,
+    code_scale: f64,
 }
 #[derive(Deserialize)]
 struct MinMax {
@@ -517,6 +518,7 @@ fn main() {
     let _ = writeln!(o, "pub const BASE_PT: f64 = {};", f(s.optical.base_pt));
     let _ = writeln!(o, "pub const SIZE_MIN_PT: f64 = {};", f(s.optical.size_min_pt));
     let _ = writeln!(o, "pub const RHYTHM_UNIT_RATIO: f64 = {};", f(s.optical.rhythm_unit_ratio));
+    let _ = writeln!(o, "pub const CODE_SCALE: f64 = {};", f(s.optical.code_scale));
 
     let out = std::env::var("OUT_DIR").expect("OUT_DIR");
     std::fs::write(std::path::Path::new(&out).join("spec.rs"), o).expect("write generated spec.rs");
