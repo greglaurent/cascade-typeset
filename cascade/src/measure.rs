@@ -68,28 +68,13 @@ pub fn measure_face(data: &[u8]) -> Result<Measured, String> {
         let _ = face.set_variation(ttf_parser::Tag::from_bytes(b"opsz"), a.min_value);
     }
 
-    // wght IS averaged: the advance thickens with weight (non-linearly), and the body may be set at
-    // any weight, so one arbitrary instance under-describes the family. Sample the metric vector at
-    // the weights the font provides and combine them by a BODY-WEIGHT USAGE prior (`m* = pᵀ M`) —
-    // Regular dominates, light is rare, bold occasional. Only the advance row actually varies with
-    // weight (x-height / cap / asc / desc are weight-invariant, so they average back to their own
-    // constant); the matrix form just keeps it uniform. NB this bakes ONE weight-independent advance,
-    // so a Regular body gets a hair over the target chars/line and a Bold body a hair under — the
-    // right hedge for a FIXED measure. If the measure should ever track the document's body weight,
-    // keep the curve instead of collapsing it to a scalar here.
-    let m = match variation_axis(&face, b"wght") {
-        Some(a) => {
-            let wght = ttf_parser::Tag::from_bytes(b"wght");
-            let mut acc = MetricVec::ZERO;
-            for (pos, p) in wght_prior(a.min_value, a.max_value) {
-                let _ = face.set_variation(wght, pos);
-                acc = acc.add_scaled(measure_at(&face, upem)?, p);
-            }
-            let _ = face.set_variation(wght, a.def_value); // restore the default instance
-            acc
-        }
-        None => measure_at(&face, upem)?, // static font: one row, no averaging
-    };
+    // wght is left at the font's DEFAULT instance — the designer's representative weight (≈ Regular),
+    // which is the weight body text is set at. `avg_advance` is a plain measured metric like x_height:
+    // measure it AT the body's weight, don't average over an assumed weight-usage distribution. The
+    // advance is the one metric that varies with weight (x-height / cap / asc / desc do not); if a
+    // consumer sets the body at another weight, the advance is measured at THAT weight — a renderer
+    // selects the weight's advance the same way `bundle-*` selects a font's — never a baked guess.
+    let m = measure_at(&face, upem)?;
 
     Ok(Measured {
         family: face.names().into_iter().find(|n| n.name_id == 1).and_then(|n| n.to_string()),
@@ -103,35 +88,8 @@ pub fn measure_face(data: &[u8]) -> Result<Measured, String> {
     })
 }
 
-/// How often each OpenType weight class is set as BODY text — the averaging prior, keyed to the
-/// standard weights (400 = Regular). A legible, arguable distribution: Regular dominates, light is
-/// rare as body, bold is set occasionally. This is the one knob; adjust the rates, not a Gaussian σ.
-const WEIGHT_USAGE: &[(f32, f64)] = &[
-    (300.0, 0.10), // Light
-    (400.0, 0.50), // Regular — the default body weight
-    (500.0, 0.20), // Medium
-    (600.0, 0.12), // SemiBold
-    (700.0, 0.08), // Bold
-];
-
-/// The averaging prior `p` over the wght axis: the usage rates above, restricted to the weights the
-/// font's axis actually covers `[min, max]` and renormalized to `Σp = 1`. A font that spans a
-/// non-standard band (nothing in 300–700) falls back to its midpoint. Returns `(weight, p_i)`.
-fn wght_prior(min: f32, max: f32) -> Vec<(f32, f64)> {
-    let mut samples: Vec<(f32, f64)> =
-        WEIGHT_USAGE.iter().copied().filter(|&(w, _)| w >= min && w <= max).collect();
-    if samples.is_empty() {
-        samples.push(((min + max) / 2.0, 1.0));
-    }
-    let sum: f64 = samples.iter().map(|(_, p)| p).sum();
-    for s in &mut samples {
-        s.1 /= sum;
-    }
-    samples
-}
-
-/// One row of the metric matrix `M`: the em-normalized optical facts at the face's CURRENT variation
-/// coordinates. Weight-invariant across the wght axis except `avg_advance`.
+/// The em-normalized optical facts at the face's CURRENT variation coordinates (opsz pinned to the
+/// text end, wght at the default instance). Weight-invariant across the wght axis except `avg_advance`.
 #[derive(Clone, Copy)]
 struct MetricVec {
     x_height: f64,
@@ -139,21 +97,6 @@ struct MetricVec {
     avg_advance: f64,
     ascender: f64,
     descender: f64,
-}
-
-impl MetricVec {
-    const ZERO: MetricVec =
-        MetricVec { x_height: 0.0, cap_height: 0.0, avg_advance: 0.0, ascender: 0.0, descender: 0.0 };
-    /// `self + p · other` — one term of the weighted sum `pᵀ M`.
-    fn add_scaled(self, o: MetricVec, p: f64) -> MetricVec {
-        MetricVec {
-            x_height: self.x_height + o.x_height * p,
-            cap_height: self.cap_height + o.cap_height * p,
-            avg_advance: self.avg_advance + o.avg_advance * p,
-            ascender: self.ascender + o.ascender * p,
-            descender: self.descender + o.descender * p,
-        }
-    }
 }
 
 /// Measure the em-normalized metric vector at the face's current variation state. Errors if the font

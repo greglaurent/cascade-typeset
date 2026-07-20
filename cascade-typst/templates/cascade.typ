@@ -123,9 +123,9 @@
     fill: theme.code-bg, inset: 1em, radius: 4pt, width: 100%, breakable: true,
     below: typ.code-block.at("below", default: rhythm.baseline),
     {
-      // Code never hyphenates or justifies: a line that exceeds the measure soft-wraps at whitespace,
-      // never mid-token (so a flag like `--verify` can't split into `--` / `verify`). Print's analogue
-      // of the CSS block's `overflow-x: auto` (which keeps the line intact and scrolls instead).
+      // Code never hyphenates or justifies: a line past the measure soft-wraps at whitespace, never
+      // mid-token (so a flag like `--verify` can't split into `--` / `verify`). Print's analogue of
+      // the CSS block's `overflow-x: auto` (which keeps the line intact and scrolls instead).
       set par(leading: 0pt, justify: false)
       set text(hyphenate: false)
       _apply(typ.code-block, body, font: fonts.code, fill: theme.code-fg)

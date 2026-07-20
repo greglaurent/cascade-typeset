@@ -73,7 +73,7 @@ Put plainly, the process is short:
 + Let the rhythm follow from the leading.
 
 ```
-cascade build --config cascade.toml --out dist --verify
+cascade build --out dist --verify
 ```
 
 #figure(caption: [Figure 1. A figure with its caption set in the caption style.])[

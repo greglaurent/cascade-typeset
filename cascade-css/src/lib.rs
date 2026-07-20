@@ -777,13 +777,17 @@ impl Renderer for Css {
         // spec's character `measure` × the body font's real mean advance (`--cf-aw`, em) via
         // copyfitting — a TRUE character count per typeface, not a `1ch` (the "0" advance, which
         // overshoots and breaches the WCAG 1.4.8 ~80ch ceiling) nor a textbook 0.5em. `--cf-aw` is
-        // reactive, so switching the body face (`bundle-*`) re-resolves it. Every layout mode binds
+        // reactive, so switching the body face (`bundle-*`) re-resolves it. Anchored to the BASE
+        // reading size (`--cs-base`), NOT `1em`: a custom property with `1em` re-resolves against each
+        // element's OWN font-size, so smaller/larger roles (code, text-1…5, captions) would each get a
+        // different column width. The measure is ONE column, so it must key off the body size — which
+        // also matches the print projection (Typst uses the fixed `BASE_PT`). Every layout mode binds
         // this SAME text width: banded caps its offset text column at it (sidenotes.css), and the
         // centered container below sizes to it PLUS the page padding — with border-box, padding is
         // inside max-inline-size, so the container must be `measure + 2×pad` for the TEXT (not the
         // text-minus-padding) to equal the measure. min(100%, …) keeps it inside a narrow viewport.
         let pad = Var::space("p5").get();
-        layout.push_str(&format!(".cascade {{ box-sizing: border-box; {mi}: calc({m} * {aw} * 1em); max-inline-size: min(100%, calc({mir} + 2 * {pad})); margin-inline: auto; padding: {pad}; text-rendering: optimizeLegibility; font-kerning: normal; font-feature-settings: \"kern\", \"liga\", \"clig\"; -webkit-font-smoothing: antialiased; hyphens: none; {xhd}: {xhb}; }}\n", mi = Var::measure_inline().def(), m = Var::measure().get(), aw = Var::avg_advance().get(), mir = Var::measure_inline().get(), pad = pad, xhd = Var::xh_doc().def(), xhb = Var::xh(b).get()));
+        layout.push_str(&format!(".cascade {{ box-sizing: border-box; {mi}: calc({m} * {aw} * {base}); max-inline-size: min(100%, calc({mir} + 2 * {pad})); margin-inline: auto; padding: {pad}; text-rendering: optimizeLegibility; font-kerning: normal; font-feature-settings: \"kern\", \"liga\", \"clig\"; -webkit-font-smoothing: antialiased; hyphens: none; {xhd}: {xhb}; }}\n", mi = Var::measure_inline().def(), m = Var::measure().get(), aw = Var::avg_advance().get(), base = Var::base().get(), mir = Var::measure_inline().get(), pad = pad, xhd = Var::xh_doc().def(), xhb = Var::xh(b).get()));
         layout.push_str(".cascade *, .cascade *::before, .cascade *::after { box-sizing: border-box; }\n");
         layout.push_str(".cascade > *:last-child { margin-bottom: 0; }\n");
         layout.push_str(".cascade :is(h1, h2, h3, h4):first-child { margin-top: 0; }\n");
@@ -1047,11 +1051,13 @@ mod tests {
     #[test]
     fn measure_is_a_copyfit_width_from_the_real_advance_not_ch() {
         // The reading measure is projected ONCE, via copyfitting: characters × the body font's real
-        // mean advance (--cf-aw) × 1em — never `ch` (the "0" advance, which overshoots) nor 0.5em.
+        // mean advance (--cf-aw) × the BASE reading size (--cs-base) — never `ch` (the "0" advance,
+        // which overshoots) nor 0.5em, and NOT `1em` (which re-resolves per element font-size, giving
+        // each role its own column width instead of one shared measure).
         let layout = out("layout.css");
         // --cf-measure-inline is the TEXT line length (no padding); the centered container sizes to
         // it PLUS the page padding, so the text (not text-minus-padding) equals the measure.
-        assert!(layout.contains("--cf-measure-inline: calc(var(--cf-measure) * var(--cf-aw) * 1em);"));
+        assert!(layout.contains("--cf-measure-inline: calc(var(--cf-measure) * var(--cf-aw) * var(--cs-base));"));
         assert!(layout.contains(
             "max-inline-size: min(100%, calc(var(--cf-measure-inline) + 2 * var(--cr-space-p5)))"
         ));
